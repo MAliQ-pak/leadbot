@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LeadBot Chat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500;1,9..144,600&family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="/static/chat.css">
+</head>
+<body>
+  <header>
+    <span class="brand">LeadBot <small>BrightPath Solar</small></span>
+    <nav>
+      <span id="mode" class="mode"></span>
+      <button id="new-chat" type="button">New chat</button>
+      <a href="/admin">Dashboard</a>
+    </nav>
+  </header>
+
+  <div class="layout">
+    <!-- Left: the conversation -->
+    <section class="chat">
+      <div id="msgs" class="msgs" aria-live="polite"></div>
+      <div id="chips" class="chips">
+        <button type="button">How much is a 5kw system?</button>
+        <button type="button">5kw ki qeemat kitni hai?</button>
+        <button type="button">What is the warranty?</button>
+        <button type="button">Do you offer installments?</button>
+      </div>
+      <form id="form" class="form">
+        <input id="input" placeholder="Type your message..." autocomplete="off" maxlength="1000">
+        <button id="send" type="submit">Send</button>
+      </form>
+    </section>
+
+    <!-- Right: live lead score, updated after every bot reply -->
+    <aside class="panel">
+      <div class="card">
+        <h2>Lead score</h2>
+        <div class="score-row">
+          <b id="score">0</b>
+          <span id="tier" class="badge cold">cold</span>
+        </div>
+        <div class="bar-label"><span>Rules</span><span id="rule-val">0</span></div>
+        <div class="bar"><div id="rule-bar"></div></div>
+        <div class="bar-label"><span>Model (classifier)</span><span id="ml-val">-</span></div>
+        <div class="bar"><div id="ml-bar" class="ml"></div></div>
+        <p class="hint">Final score blends the rules and the trained model.</p>
+      </div>
+
+      <div class="card">
+        <h2>Why this score</h2>
+        <p id="reason" class="reason">No buying signals yet.</p>
+      </div>
+
+      <div class="card">
+        <h2>Lead details</h2>
+        <ul id="fields" class="fields"></ul>
+      </div>
+
+    </aside>
+  </div>
+
+  <script src="/static/chat.js" defer></script>
+</body>
+</html>

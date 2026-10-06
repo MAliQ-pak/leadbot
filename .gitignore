@@ -1,0 +1,16 @@
+# secrets: never commit (the API key and admin password live here)
+.env
+
+# local data: leads, chats and phone numbers from testing
+leadbot.db
+leadbot.db-journal
+crm_mock.jsonl
+
+# Python / editor clutter
+__pycache__/
+*.pyc
+.venv/
+venv/
+.vscode/
+.idea/
+.claude/

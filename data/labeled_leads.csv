@@ -1,0 +1,63 @@
+name,phone,email,need,budget,timeline,user_text,qualified
+1,1,0,1,1,1,"how much for a 5kw system? my name is Ali, 03001234567, budget 9 lac, need it this month",1
+1,1,1,1,1,1,"we want a 10kw hybrid for our factory, budget 2 million, can you visit next week? email ahmed@example.com",1
+0,0,0,0,0,0,"hi",0
+0,0,0,0,0,0,"what is solar?",0
+0,0,0,1,0,0,"do you sell batteries?",0
+1,0,0,0,0,0,"my name is Bilal, just checking",0
+0,1,0,1,0,0,"5kw ki qeemat kitni hai? 03211234567",1
+1,1,0,1,0,1,"mera naam Sana hai, 5kw lagwana hai jaldi, 03331234567",1
+0,0,0,1,1,0,"inverter price? budget 2 lakh but maybe next year",0
+1,1,0,1,0,0,"I'm a student doing research on solar companies, my number is 03001112223",0
+0,0,1,0,0,0,"send me your brochure at test@example.com",0
+1,1,0,1,1,1,"need 3kw on-grid for my house, budget 4 lac, is mahine, Hina 03451234567",1
+0,0,0,1,0,1,"we need net metering done asap, how much does it cost?",1
+0,0,0,0,0,0,"where is your office?",0
+0,0,0,1,0,0,"just looking, what brands of panels do you use?",0
+1,1,1,1,0,0,"book a free site visit please. Usman, 03009998887, usman@example.com, 7kw system",1
+0,0,0,1,1,1,"need 5kw installation this week, budget 7 lac",1
+0,1,0,0,0,0,"call me 03121234567",1
+0,0,0,0,0,0,"do you have jobs?",0
+1,0,0,0,0,0,"this is Kamran from a competitor, what margins do you work on?",0
+0,0,0,1,0,0,"maintenance ka rate kya hai?",0
+1,1,0,1,0,0,"panel cleaning service chahiye, Faisal 03011231234",1
+0,0,0,1,1,0,"10kw hybrid, budget 20 lac, kist available?",1
+0,0,0,0,0,0,"ok thanks",0
+0,0,0,1,0,1,"maybe next year we will think about solar",0
+1,1,0,1,1,1,"Ayesha here, 03221231234, 6kw system, budget 8 lac, kal visit kar sakte hain?",1
+0,0,0,1,0,0,"what is the warranty on panels?",0
+0,0,0,1,0,0,"how long does installation take?",0
+1,0,1,1,0,0,"Zain, zain@example.com, interested in battery backup for load shedding",1
+0,0,0,0,0,0,"assalam o alaikum",0
+0,1,0,1,0,0,"price list bhej dein whatsapp pe 03334445556, sirf maloomat ke liye",0
+0,0,0,1,1,1,"we want to buy a 15kw system for our school next month, budget 25 lac",1
+1,1,0,0,0,0,"my name is Hamza 03015556667 please call back",1
+0,0,0,1,0,0,"solar panel kitne ka hai",0
+0,0,0,1,0,0,"do you install in Multan?",0
+1,1,1,1,1,1,"Nadia, 03007778889, nadia@example.com, 5kw on-grid, budget 7 lac, abhi chahiye",1
+0,0,0,1,1,0,"budget is 3 lac, what can I get? just comparing options for now",0
+0,0,0,1,0,1,"need a quote for 8kw urgent",1
+0,0,0,0,0,0,"are you open on sunday?",0
+1,0,0,1,0,0,"I am Saad, want info on solar for my home",0
+0,1,0,1,1,0,"03451112223 budget 5 lac 5kw hybrid installment possible?",1
+0,0,0,1,0,0,"what is net metering?",0
+1,1,0,1,0,1,"Imran 03021234567 need inverter replacement today",1
+0,0,0,0,0,0,"testing the bot",0
+0,0,1,1,0,0,"quote for 4kw to info@example.com please",1
+0,0,0,1,1,0,"not now, but what would 12 lac get me?",0
+1,1,0,1,1,0,"Rabia 03111234567, 3kw, budget 3.5 lac, how much down payment?",1
+0,0,0,1,0,0,"which is better on-grid or hybrid?",0
+0,0,0,1,0,1,"baad mein dekhenge, abhi sirf rate pooch rahe hain",0
+1,1,0,1,0,0,"Tariq, 03431234567, commercial solar for my shop",1
+0,0,0,1,1,1,"5kw chahiye is hafte, budget 6 lac",1
+0,1,0,0,0,0,"wrong number 03001231231 sorry",0
+0,0,0,1,0,0,"do you give discounts?",0
+1,1,1,1,1,1,"Omar, 03219876543, omar@example.com, 20kw for warehouse, budget 30 lac, ASAP",1
+0,0,0,1,0,0,"battery kitne saal chalti hai?",0
+0,0,0,1,1,0,"i have 10 lac budget for solar, what do you recommend? planning to install soon",1
+1,0,0,0,0,0,"mera naam Asad hai",0
+0,0,0,1,0,1,"just curious, how long would 5kw take to install next month?",0
+1,1,0,1,0,0,"Mariam 03331112223 site visit book karna hai",1
+0,0,0,1,0,0,"panels made in china?",0
+0,0,0,1,1,1,"want solar for new house in 2 months, budget 15 lac, can you visit?",1
+0,1,0,1,0,0,"just checking prices for my uncle, 03004445556",0

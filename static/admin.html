@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LeadBot Admin Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500;1,9..144,600&family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="/static/admin.css">
+</head>
+<body>
+  <aside class="side">
+    <div class="brand">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="7" fill="#9FBE9A"/><g stroke="#9FBE9A" stroke-width="2.5" stroke-linecap="round"><path d="M16 2v4M16 26v4M2 16h4M26 16h4M6 6l2.8 2.8M23.2 23.2 26 26M6 26l2.8-2.8M23.2 8.8 26 6"/></g></svg>
+      <div>LeadBot<small id="biz">Admin panel</small></div>
+    </div>
+    <nav>
+      <a href="#overview" data-page="overview">Overview</a>
+      <a href="#leads" data-page="leads">Leads <span id="nav-count" class="count">0</span></a>
+      <a href="#bot" data-page="bot">Bot &amp; knowledge <span id="nav-un" class="count alert" title="Unanswered questions" hidden>0</span></a>
+    </nav>
+    <div class="side-foot">
+      <a href="/" target="_blank">View website &#8599;</a>
+      <span id="mode" class="mode"></span>
+    </div>
+  </aside>
+
+  <main>
+    <header class="top">
+      <h1 id="page-title">Overview</h1>
+      <span class="live"><i></i> Live, updates every 5 s</span>
+    </header>
+
+    <!-- OVERVIEW -->
+    <section id="page-overview" class="page">
+      <div class="kpis">
+        <div class="kpi"><span>Total leads</span><b id="k-total">0</b></div>
+        <div class="kpi hot"><span>Hot</span><b id="k-hot">0</b></div>
+        <div class="kpi warm"><span>Warm</span><b id="k-warm">0</b></div>
+        <div class="kpi cold"><span>Cold</span><b id="k-cold">0</b></div>
+        <div class="kpi won"><span>Won</span><b id="k-won">0</b></div>
+        <div class="kpi lost"><span>Lost</span><b id="k-lost">0</b></div>
+      </div>
+      <div class="cols">
+        <div class="box">
+          <h2>Hot leads to call now</h2>
+          <div id="hot-list" class="mini"></div>
+        </div>
+        <div class="box">
+          <h2>Pipeline</h2>
+          <div id="pipeline"></div>
+          <h2 class="mt">Latest conversations</h2>
+          <div id="recent-list" class="mini"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- LEADS -->
+    <section id="page-leads" class="page" hidden>
+      <div class="toolbar">
+        <div id="tabs" class="tabs" role="tablist"></div>
+        <input id="search" type="search" placeholder="Search name, phone, need...">
+      </div>
+      <p class="hint">Hot, Warm and Cold show open leads (New or Contacted). Won and Lost are closed leads you marked yourself.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Lead</th><th>Score</th><th>Need</th><th>Budget</th><th>Timeline</th><th>Status</th><th>Last active</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- BOT -->
+    <section id="page-bot" class="page" hidden>
+      <div class="kpis three">
+        <div class="kpi"><span>Bot mode</span><b id="b-mode">-</b><small id="b-mode-note"></small></div>
+        <div class="kpi"><span>Lead scoring</span><b id="b-clf">-</b><small id="b-clf-note"></small></div>
+        <div class="kpi"><span>Knowledge base</span><b id="b-sections">0</b><small id="b-sources">topics the bot can answer</small></div>
+      </div>
+
+      <!-- Try a question against the knowledge base and see what the bot would find -->
+      <div class="box">
+        <div class="box-head">
+          <h2>Test the knowledge</h2>
+          <a class="btn ghost" href="/chat" target="_blank">Open bot tester &#8599;</a>
+        </div>
+        <form id="kt-form" class="inline-form">
+          <input id="kt-q" placeholder="Ask a test question, e.g. do you sell generators?" maxlength="500">
+          <button class="btn" type="submit">Test</button>
+        </form>
+        <div id="kt-out"></div>
+      </div>
+
+      <div class="box mt16">
+        <div class="box-head">
+          <h2>Train the knowledge base</h2>
+        </div>
+        <div id="kb-tabs" class="tabs sub-tabs">
+          <button data-kbtab="qa" class="active">Q&amp;A <span id="c-qa">0</span></button>
+          <button data-kbtab="unanswered">Unanswered <span id="c-un" class="alert">0</span></button>
+          <button data-kbtab="docs">Documents &amp; websites <span id="c-docs">0</span></button>
+          <button data-kbtab="text">Main text</button>
+        </div>
+
+        <!-- Q&A pairs -->
+        <div id="kb-qa" class="kb-pane">
+          <p class="hint">Add a question and its answer. Add other ways people ask it (for example in Roman Urdu), one per line, so the bot recognises them too.</p>
+          <form id="qa-form" class="qa-form">
+            <input type="hidden" id="qa-id">
+            <input type="hidden" id="qa-unanswered">
+            <label>Question<input id="qa-q" required minlength="3" maxlength="300" placeholder="Do you install in Multan?"></label>
+            <label>Other ways to ask <small>(optional, one per line)</small>
+              <textarea id="qa-v" rows="2" maxlength="1000" placeholder="Multan mein lagate ho?&#10;Is Multan in your service area?"></textarea></label>
+            <label>Answer<textarea id="qa-a" rows="3" required minlength="2" maxlength="2000" placeholder="Not yet. We currently install in Karachi, Lahore and Islamabad."></textarea></label>
+            <div class="row">
+              <button class="btn" type="submit" id="qa-submit">Add Q&amp;A</button>
+              <button class="btn ghost" type="button" id="qa-cancel" hidden>Cancel</button>
+              <span id="qa-status" class="hint"></span>
+            </div>
+          </form>
+          <div id="qa-list" class="kb-list"></div>
+        </div>
+
+        <!-- Questions the bot could not answer -->
+        <div id="kb-unanswered" class="kb-pane" hidden>
+          <p class="hint">Questions visitors asked that the knowledge base could not answer confidently. Answer one and the bot knows it from the next message onwards.</p>
+          <div id="un-list" class="kb-list"></div>
+        </div>
+
+        <!-- Uploaded files and imported web pages -->
+        <div id="kb-docs" class="kb-pane" hidden>
+          <div class="import-grid">
+            <label class="drop" id="drop">
+              <input type="file" id="file-in" accept=".pdf,.docx,.txt,.md" hidden>
+              <b>Upload a document</b>
+              <span>PDF, Word (.docx), TXT or Markdown, up to 5 MB. Click or drop a file here.</span>
+            </label>
+            <form id="url-form" class="url-box">
+              <b>Import a web page</b>
+              <span>Paste a page address, e.g. the business's existing website. Needs internet.</span>
+              <div class="inline-form">
+                <input id="url-in" type="url" placeholder="https://example.com/services" required>
+                <button class="btn" type="submit">Import</button>
+              </div>
+            </form>
+          </div>
+          <p id="doc-status" class="hint"></p>
+          <div id="doc-list" class="kb-list"></div>
+        </div>
+
+        <!-- The original main text (kb/business.md) -->
+        <div id="kb-text-pane" class="kb-pane" hidden>
+          <div class="row between">
+            <p class="hint">The main business text (<code>kb/business.md</code>). Each <code>## Heading</code> is one topic.</p>
+            <button id="kb-save" class="btn">Save changes</button>
+          </div>
+          <div id="kb-chips" class="chips"></div>
+          <textarea id="kb-text" spellcheck="false"></textarea>
+          <p id="kb-status" class="hint"></p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Lead detail drawer -->
+  <div id="shade" class="shade" hidden></div>
+  <aside id="drawer" class="drawer" hidden aria-label="Lead details">
+    <div class="d-head">
+      <div><h2 id="d-name"></h2><small id="d-sub"></small></div>
+      <button id="d-close" class="x" aria-label="Close">&times;</button>
+    </div>
+    <div class="d-body">
+      <div class="d-score">
+        <div class="big"><b id="d-score"></b><span id="d-tier" class="badge"></span></div>
+        <div class="bars">
+          <div class="bar-label"><span>Rules</span><span id="d-rule"></span></div>
+          <div class="bar"><i id="d-rule-bar"></i></div>
+          <div class="bar-label"><span>Model (classifier)</span><span id="d-ml"></span></div>
+          <div class="bar"><i id="d-ml-bar" class="ml"></i></div>
+        </div>
+      </div>
+      <p id="d-reason" class="reason"></p>
+
+      <h3>Details</h3>
+      <dl id="d-fields" class="fields"></dl>
+
+      <h3>Status</h3>
+      <div id="d-status" class="seg"></div>
+
+      <h3>Notes</h3>
+      <textarea id="d-notes" placeholder="e.g. Called on Monday, wants site visit Saturday"></textarea>
+      <div class="row"><button id="d-save-notes" class="btn">Save notes</button><span id="d-notes-status" class="hint"></span></div>
+
+      <h3>Conversation</h3>
+      <div id="d-chat" class="chat"></div>
+
+      <button id="d-delete" class="btn danger">Delete lead</button>
+    </div>
+  </aside>
+
+  <script src="/static/admin.js" defer></script>
+  <script src="/static/admin-kb.js" defer></script>
+</body>
+</html>

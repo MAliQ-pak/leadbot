@@ -1,0 +1,8 @@
+fastapi==0.142.2
+uvicorn==0.54.0
+anthropic==1.11.0
+httpx==0.28.1
+# scikit-learn must match the version that trained models/lead_classifier.joblib
+scikit-learn==1.9.1
+joblib==1.6.0
+pypdf==6.19.0
