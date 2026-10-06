@@ -5,11 +5,11 @@ Each member owns one area of LeadBot and presents it. Everyone reads Sections 1 
 | Member | Area owned | Chapter |
 | --- | --- | --- |
 | Mohammed Maarij | Website, chat widget and user-interface design | 4 |
-| Abdul Mannan Khan | AI and retrieval: RAG, Gemini / Claude, prompt, offline bot, knowledge-base training | 5 |
-| Hamza Younus | Lead scoring, the classifier, testing and evaluation | 6 |
-| Muhammad Ali | Backend, admin panel (pipeline, audit log), security and deployment | 7 |
+| Abdul Manan Khan | AI and retrieval: RAG, Gemini / Claude, prompt, offline bot, knowledge-base training | 5 |
+| Muhammad Hamza Younus | Lead scoring, the classifier, testing and evaluation | 6 |
+| Muhammad Ali Qureshi | Backend, admin panel (pipeline, audit log), security and deployment | 7 |
 
-The order follows one visitor's journey: Maarij shows the website the visitor sees, Abdul Mannan shows how the bot answers, Hamza shows how the lead is scored, and Ali shows what the owner does with it.
+The order follows one visitor's journey: Maarij shows the website the visitor sees, Abdul Manan shows how the bot answers, Hamza shows how the lead is scored, and Ali shows what the owner does with it.
 
 ## 1 Running order (30 minutes)
 
@@ -17,17 +17,17 @@ The order follows one visitor's journey: Maarij shows the website the visitor se
 | --- | --- | --- | --- |
 | 0:00 - 2:00 | Opening: the problem, the team, the 60-second pitch | Mohammed Maarij | Title slide, then the live website |
 | 2:00 - 8:30 | Website, chat widget, design | Mohammed Maarij | Website, widget, phone view |
-| 8:30 - 15:30 | How the bot answers: retrieval, AI, offline bot, training | Abdul Mannan Khan | Chat, then Admin > Bot & knowledge |
-| 15:30 - 22:00 | Lead scoring, the classifier, testing | Hamza Younus | Lead panel in Admin, training script output |
-| 22:00 - 28:30 | Admin panel, pipeline, audit log, security, deployment | Muhammad Ali | Admin > Pipeline, Audit log, live link |
-| 28:30 - 30:00 | Close: results, limitations, invite questions | Muhammad Ali | Summary slide |
+| 8:30 - 15:30 | How the bot answers: retrieval, AI, offline bot, training | Abdul Manan Khan | Chat, then Admin > Bot & knowledge |
+| 15:30 - 22:00 | Lead scoring, the classifier, testing | Muhammad Hamza Younus | Lead panel in Admin, training script output |
+| 22:00 - 28:30 | Admin panel, pipeline, audit log, security, deployment | Muhammad Ali Qureshi | Admin > Pipeline, Audit log, live link |
+| 28:30 - 30:00 | Close: results, limitations, invite questions | Muhammad Ali Qureshi | Summary slide |
 
-Keep each segment to its time: practise with a timer twice. If the slot is cut to 20 minutes, drop the phone-view demo (Maarij), the document upload (Abdul Mannan), the training-script run (Hamza) and the live-site login (Ali).
+Keep each segment to its time: practise with a timer twice. If the slot is cut to 20 minutes, drop the phone-view demo (Maarij), the document upload (Abdul Manan), the training-script run (Hamza) and the live-site login (Ali).
 
 **Handover lines** (say the next person's name and what they will show):
 
-- Maarij to Abdul Mannan: "That's what the visitor sees. Abdul Mannan will show how the bot decides what to answer."
-- Abdul Mannan to Hamza: "Once the bot has the visitor's details, Hamza will show how we score the lead."
+- Maarij to Abdul Manan: "That's what the visitor sees. Abdul Manan will show how the bot decides what to answer."
+- Abdul Manan to Hamza: "Once the bot has the visitor's details, Hamza will show how we score the lead."
 - Hamza to Ali: "A score is only useful if the owner acts on it. Ali will show the owner's side."
 
 ## 2 What everyone must know
@@ -41,7 +41,7 @@ Small businesses lose customers who visit their website after hours, ask a quest
 [[ARCH]]
 
 - **Maarij:** the website visitor box, meaning the website and the chat widget.
-- **Abdul Mannan:** Retrieval, the AI layer, Gemini or Claude, the main text, and the Q&A and documents in the database.
+- **Abdul Manan:** Retrieval, the AI layer, Gemini or Claude, the main text, and the Q&A and documents in the database.
 - **Hamza:** Lead scoring.
 - **Ali:** the server itself, the Chat API, the Admin API, the database and the business owner box.
 
@@ -127,7 +127,7 @@ I built everything the visitor sees: the BrightPath Solar website, the chat widg
 2. Click **Ask about this** on the 10 kW Hybrid package. The chat opens and answers with the real price. Point out the typing dots and the quick-reply buttons.
 3. Reload the page and reopen the chat: the conversation is still there.
 4. Make the browser narrow (or open DevTools device mode): the widget goes full-screen, the menu collapses.
-5. Hand over to Abdul Mannan.
+5. Hand over to Abdul Manan.
 
 ### 4.4 Code walkthrough
 
@@ -181,7 +181,7 @@ Every price and policy on the site comes from `kb/business.md`, the same text th
 - **Anyone who knows a session ID can read that chat** through the restore endpoint. IDs are random and long, so guessing one is impractical, but a signed token would be stronger.
 - **No formal accessibility audit**; some light-grey hint text is below the recommended contrast, and there is no right-to-left layout for Urdu in Arabic script.
 
-## 5 Abdul Mannan Khan: AI and retrieval
+## 5 Abdul Manan Khan: AI and retrieval
 
 ### 5.1 Your part in one sentence
 
@@ -263,7 +263,7 @@ On the free tier Google may use the content to improve its products, so we use f
 - **The offline bot uses only the best-matching topic**, so it can give a partial answer to a two-topic question.
 - **The free Gemini quota is small**, and free-tier data may be used by Google.
 
-## 6 Hamza Younus: lead scoring, the classifier and testing
+## 6 Muhammad Hamza Younus: lead scoring, the classifier and testing
 
 ### 6.1 Your part in one sentence
 
@@ -335,7 +335,7 @@ After six exchanges, the history sent to the AI started with a bot message, whic
 - **Feature overlap** with the rules means some signals count twice in the blend.
 - **Thresholds and the blend weight are chosen, not learned.**
 
-## 7 Muhammad Ali: backend, admin panel, security and deployment
+## 7 Muhammad Ali Qureshi: backend, admin panel, security and deployment
 
 ### 7.1 Your part in one sentence
 
@@ -446,7 +446,7 @@ For a pilot, close to it: it needs cross-domain CORS for embedding, a login lock
 
 If a question is about another member's area, give one sentence and hand over. Examiners like teams that know who owns what.
 
-- "Briefly, the bot only answers from our text; Abdul Mannan can explain how it finds it."
+- "Briefly, the bot only answers from our text; Abdul Manan can explain how it finds it."
 - "The score is half rules and half model; Hamza built the classifier and can go deeper."
 - "The widget is one script; Maarij can show how it works on any page."
 - "That runs on the server; Ali handled the backend and security."

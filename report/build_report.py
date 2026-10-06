@@ -28,21 +28,21 @@ TITLE = "LeadBot"
 SUBTITLE = "An AI lead-qualification chatbot for small businesses"
 # (name, roll number, area owned) - the order here is the order on the cover and in the report
 TEAM = [
-    ("Mohammed Maarij", "", "Website, chat widget and user-interface design"),
-    ("Abdul Mannan Khan", "", "AI and retrieval: RAG, Gemini / Claude, prompt, offline bot, knowledge-base training"),
-    ("Muhammad Ali", "", "Backend, admin panel (pipeline, audit log), security and deployment"),
-    ("Hamza Younus", "", "Lead scoring, the classifier, testing and evaluation"),
+    ("Mohammed Maarij", "19252105", "Website, chat widget and user-interface design"),
+    ("Abdul Manan Khan", "19252165", "AI and retrieval: RAG, Gemini / Claude, prompt, offline bot, knowledge-base training"),
+    ("Muhammad Ali Qureshi", "19252094", "Backend, admin panel (pipeline, audit log), security and deployment"),
+    ("Muhammad Hamza Younus", "19252201", "Lead scoring, the classifier, testing and evaluation"),
 ]
 # main files per member, shown in the report's Team and contributions table
 TEAM_FILES = {
     "Mohammed Maarij": "static/index.html, site.css, widget.js, chat.html/.css/.js, static/fonts/",
-    "Abdul Mannan Khan": "app/rag.py, app/llm.py, app/ingest.py, static/admin-kb.js, kb/business.md",
-    "Muhammad Ali": "app/main.py, app/db.py, app/auth.py, static/admin.*, admin-pipeline.js, render.yaml",
-    "Hamza Younus": "app/scoring.py, app/classifier.py, train_classifier.py, data/labeled_leads.csv",
+    "Abdul Manan Khan": "app/rag.py, app/llm.py, app/ingest.py, static/admin-kb.js, kb/business.md",
+    "Muhammad Ali Qureshi": "app/main.py, app/db.py, app/auth.py, static/admin.*, admin-pipeline.js, render.yaml",
+    "Muhammad Hamza Younus": "app/scoring.py, app/classifier.py, train_classifier.py, data/labeled_leads.csv",
 }
-SUPERVISOR = ""       # e.g. "Dr. A. Khan"
-DEPARTMENT = ""       # e.g. "Department of Computer Science"
-UNIVERSITY = ""       # e.g. "University of ..."
+SUPERVISOR = "Muhammad Siddique"
+DEPARTMENT = "BSCS"
+UNIVERSITY = "Federal Urdu University of Arts, Science and Technology"
 REPORT_DATE = date.today().strftime("%B %Y")
 LIVE_URL = "https://leadbot-g3d4.onrender.com"
 CODE_URL = "https://github.com/MAliQ-pak/leadbot"
