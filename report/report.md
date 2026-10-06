@@ -6,6 +6,12 @@ Replies are produced by retrieval-augmented generation: a TF-IDF retriever over 
 
 A business owner manages everything from a password-protected admin panel: a deals pipeline board, leads by temperature, full conversations, notes, an audit log, and four ways to train the bot (Q&A pairs, unanswered questions, uploaded documents, imported web pages). In testing, the classifier reached 92% accuracy in 5-fold cross-validation on a 62-example illustrative dataset, and the AI answered in English and Roman Urdu without inventing prices or accepting a fake discount.
 
+## Team and contributions
+
+LeadBot was built by a team of four. Each member owned one area of the system end to end, from design to testing, and presents it at the viva. All four contributed to the requirements, the joint testing sessions and this report.
+
+[[TEAM_TABLE]]
+
 ## 1 Introduction
 
 ### 1.1 Problem
@@ -32,7 +38,7 @@ The system targets one business at a time, configured through a Markdown knowled
 
 ### 1.5 Report structure
 
-Section 2 reviews the background. Sections 3 to 5 cover requirements, design and implementation. Section 6 evaluates the system, Section 7 describes deployment, and Sections 8 and 9 discuss limitations and conclude. Appendix A prepares answers for the viva.
+The Team and contributions section lists who built each part. Section 2 reviews the background. Sections 3 to 5 cover requirements, design and implementation. Section 6 evaluates the system, Section 7 describes deployment, and Sections 8 and 9 discuss limitations and conclude. Appendix A prepares answers for the viva.
 
 ## 2 Background
 
@@ -138,7 +144,7 @@ The main business text lives in `kb/business.md`, where each `##` heading is one
 
 ## 5 Implementation
 
-The code is about 1,300 lines of Python and 1,600 of front-end code, split into small single-purpose files. The table maps each file to its job.
+The code is about 1,450 lines of Python and 1,800 of front-end code, split into small single-purpose files. The table maps each file to its job.
 
 | File | Job |
 | --- | --- |
@@ -274,7 +280,7 @@ The training set has 62 hand-labelled example leads: 27 qualified and 35 not. Th
 | Not qualified | 0.89 | 0.97 | 0.93 | 35 |
 | Qualified | 0.96 | 0.85 | 0.90 | 27 |
 
-Overall accuracy was 0.92. Because the labels reflect the author's own judgement, this shows the model learned that judgement consistently, not that it predicts real sales.
+Overall accuracy was 0.92. Because the labels reflect the team's own judgement, this shows the model learned that judgement consistently, not that it predicts real sales.
 
 [[FIG:weights]]
 
@@ -382,7 +388,7 @@ R4 was consulted while building the system. The others are standard sources give
 
 ## Appendix A: Viva questions and answers
 
-The answers are written in the first person, ready to say aloud. The hardest questions are likely those on the classifier's data (A.5) and on security (A.7).
+The answers are written in the team's voice, ready to say aloud. The companion Presentation and Viva Guide assigns each area to the member who presents it. The hardest questions are likely those on the classifier's data (A.5) and on security (A.7).
 
 ### A.1 Project and motivation
 
@@ -396,13 +402,13 @@ The answers are written in the first person, ready to say aloud. The hardest que
 
 **Walk me through what happens when a visitor sends a message.** The server saves it, retrieves the three best knowledge-base topics, and decides whether it is confident. It sends the rules, known details, topics and conversation to the AI, which returns a reply and lead details as JSON. Then the rules and classifier score the lead and everything is saved.
 
-**How did you decide on the visual design?** I followed one design specification across every page: Fraunces for headings, Inter for body text, and a forest-green-on-cream palette. Colour carries meaning consistently, so green is for actions, each deal stage keeps its colour everywhere, and red appears only on destructive actions.
+**How did you decide on the visual design?** We followed one design specification across every page: Fraunces for headings, Inter for body text, and a forest-green-on-cream palette. Colour carries meaning consistently, so green is for actions, each deal stage keeps its colour everywhere, and red appears only on destructive actions.
 
 ### A.3 Retrieval
 
 **What is RAG and why use it?** Retrieval-augmented generation finds the relevant text first, then asks the model to answer from it. The bot's knowledge of the business comes only from text the owner controls, so it cannot invent a price, and updating the bot means editing text, not retraining a model.
 
-**Why TF-IDF and not embeddings?** The knowledge base has tens of topics, so TF-IDF is accurate enough, instant, free, works offline and is easy to explain. Embeddings would handle synonyms better; I list them as future work for larger knowledge bases.
+**Why TF-IDF and not embeddings?** The knowledge base has tens of topics, so TF-IDF is accurate enough, instant, free, works offline and is easy to explain. Embeddings would handle synonyms better; we list them as future work for larger knowledge bases.
 
 **Why character n-grams instead of words?** Roman Urdu has no fixed spelling. "Qeemat" and "keemat" share most of their 3- to 5-letter pieces, so they still match, where whole-word matching would fail.
 
@@ -422,11 +428,11 @@ The answers are written in the first person, ready to say aloud. The hardest que
 
 **How is a lead's score calculated?** Rules add points for signals, such as 25 for a phone number and 15 for a budget. The classifier gives a probability that the lead is qualified. The final score is half of each, and 70 or more is hot, 40 to 69 warm, below 40 cold.
 
-**Why both rules and a classifier?** Rules are transparent but their weights are my guesses. The classifier learns weights from labelled examples and picks up signals the rules ignore, such as "just checking" or "next year". Showing both scores lets the owner see where they disagree.
+**Why both rules and a classifier?** Rules are transparent but their weights are our guesses. The classifier learns weights from labelled examples and picks up signals the rules ignore, such as "just checking" or "next year". Showing both scores lets the owner see where they disagree.
 
-**Why logistic regression?** It works well on small datasets, and each feature has one weight I can read out and explain. The strongest negative weight, -1.73 for "not now" wording, matches common sense, which a black-box model would not let me show.
+**Why logistic regression?** It works well on small datasets, and each feature has one weight we can read out and explain. The strongest negative weight, -1.73 for "not now" wording, matches common sense, which a black-box model would not let us show.
 
-**Your training data is made up. Isn't 92% accuracy meaningless?** It shows the model learns a consistent judgement and the pipeline works end to end, not that it predicts real sales. I say this in the report. The admin panel already records Won and Lost for each lead; those are real labels, and retraining on them is the most important next step.
+**Your training data is made up. Isn't 92% accuracy meaningless?** It shows the model learns a consistent judgement and the pipeline works end to end, not that it predicts real sales. We say this in the report. The admin panel already records Won and Lost for each lead; those are real labels, and retraining on them is the most important next step.
 
 **Why are the tier thresholds 70 and 40?** They are business choices, not learned values: 70 roughly means contact details plus a clear need and budget. With real outcome data, the thresholds could be tuned to match the owner's capacity to follow up.
 
@@ -444,7 +450,7 @@ The answers are written in the first person, ready to say aloud. The hardest que
 
 **How is the admin panel protected?** It needs the owner's username and password, checked in constant time, and the live site uses HTTPS so they are encrypted in transit. If no password is set, admin pages only open on the machine running the server. A limit on repeated failed logins would be the next improvement.
 
-**Where are the API keys?** Only in environment variables: the local `.env` file and Render's settings. The `.env` file is excluded from Git, and I scanned every commit for keys before uploading.
+**Where are the API keys?** Only in environment variables: the local `.env` file and Render's settings. The `.env` file is excluded from Git, and we scanned every commit for keys before uploading.
 
 **What about visitors' personal data?** Phone numbers and chats are stored in the database and are only visible behind the login. On Gemini's free tier, Google may use submitted content to improve its products, so the demo uses fictional data only. A real deployment would need a paid AI plan, a privacy notice and the visitor's consent.
 
@@ -460,6 +466,6 @@ The answers are written in the first person, ready to say aloud. The hardest que
 
 ### A.9 Reflection
 
-**What was the hardest part?** Making the system dependable rather than just working once: handling AI errors, quota limits, slow networks and long conversations without the visitor noticing. Most of the defects I fixed were of this kind.
+**What was the hardest part?** Making the system dependable rather than just working once: handling AI errors, quota limits, slow networks and long conversations without the visitor noticing. Most of the defects we fixed were of this kind.
 
 **What would you do differently?** Collect real conversations and outcomes from a business early, so the classifier and the tests could use real data from the start.

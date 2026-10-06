@@ -1,13 +1,17 @@
-"""Build the styled FYP report PDF from report/report.md.
+"""Build the styled FYP documents from Markdown:
 
     python report/build_report.py
 
+  report/report.md              -> report/LeadBot-FYP-Report.pdf
+  report/presentation-guide.md  -> report/LeadBot-Presentation-Guide.pdf
+
 Steps: Markdown -> HTML (Fraunces + Inter, the LeadBot colour palette) -> PDF printed by Microsoft
-Edge or Google Chrome in headless mode. The three figures are drawn here as SVG from LIVE data:
-the classifier weights come from models/lead_classifier.joblib and the retrieval scores from
+Edge or Google Chrome in headless mode. The report's three figures are drawn here as SVG from LIVE
+data: the classifier weights come from models/lead_classifier.joblib and the retrieval scores from
 app/rag.py, so the figures always match the code. Needs: pip install markdown
 """
 import html
+import os
 import re
 import shutil
 import subprocess
@@ -22,8 +26,20 @@ import markdown
 # ---------- cover page details: fill these in, then rebuild ----------
 TITLE = "LeadBot"
 SUBTITLE = "An AI lead-qualification chatbot for small businesses"
-STUDENT = "Muhammad Ali"
-ROLL_NUMBER = ""      # e.g. "FA21-BSCS-0123"
+# (name, roll number, area owned) - the order here is the order on the cover and in the report
+TEAM = [
+    ("Mohammed Maarij", "", "Website, chat widget and user-interface design"),
+    ("Abdul Mannan Khan", "", "AI and retrieval: RAG, Gemini / Claude, prompt, offline bot, knowledge-base training"),
+    ("Muhammad Ali", "", "Backend, admin panel (pipeline, audit log), security and deployment"),
+    ("Hamza Younus", "", "Lead scoring, the classifier, testing and evaluation"),
+]
+# main files per member, shown in the report's Team and contributions table
+TEAM_FILES = {
+    "Mohammed Maarij": "static/index.html, site.css, widget.js, chat.html/.css/.js, static/fonts/",
+    "Abdul Mannan Khan": "app/rag.py, app/llm.py, app/ingest.py, static/admin-kb.js, kb/business.md",
+    "Muhammad Ali": "app/main.py, app/db.py, app/auth.py, static/admin.*, admin-pipeline.js, render.yaml",
+    "Hamza Younus": "app/scoring.py, app/classifier.py, train_classifier.py, data/labeled_leads.csv",
+}
 SUPERVISOR = ""       # e.g. "Dr. A. Khan"
 DEPARTMENT = ""       # e.g. "Department of Computer Science"
 UNIVERSITY = ""       # e.g. "University of ..."
@@ -33,9 +49,16 @@ CODE_URL = "https://github.com/MAliQ-pak/leadbot"
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
-SOURCE = HERE / "report.md"
-OUT_HTML = HERE / "LeadBot-FYP-Report.html"
-OUT_PDF = HERE / "LeadBot-FYP-Report.pdf"
+DOCS = [  # (source, output name, cover eyebrow, cover lede, footer, has figures)
+    ("report.md", "LeadBot-FYP-Report", "Final Year Project Report",
+     "A website chatbot that answers from a business's own knowledge base in English and Roman Urdu, "
+     "captures and scores leads, and gives the owner a pipeline, an audit log and four ways to train the bot.",
+     "Final Year Project Report", True),
+    ("presentation-guide.md", "LeadBot-Presentation-Guide", "Presentation and viva guide",
+     "Who presents what in a 30-minute slot, the exact demo steps, a code walkthrough for each member, "
+     "and the cross-questions examiners are likely to ask, with answers.",
+     "Presentation and Viva Guide", False),
+]
 
 # the design specification's palette
 C = {
@@ -233,8 +256,11 @@ figcaption {{ font-size: 8pt; color: {C['muted']}; margin-top: 6pt; }}
 figcaption b {{ font-family: {FONT_BODY}; font-weight: 600; color: {C['green_d']}; }}
 .formula {{ margin: 8pt 0 12pt; padding: 10pt 14pt; background: {C['tint2']}; border-left: 3pt solid {C['green']}; border-radius: 0 6pt 6pt 0;
   font: italic 600 12pt {FONT_DISPLAY}; color: {C['green_d']}; }}
-.qa p {{ break-inside: avoid; }}  /* keep each question with its answer */
-.qa p > strong:first-child {{ display: block; margin: 10pt 0 2pt; font-size: 10.5pt; color: {C['green_d']}; }}
+.qa-item {{ break-inside: avoid; }}  /* keep each question with its answer */
+.q {{ display: block; margin: 10pt 0 2pt; font-size: 10.5pt; color: {C['green_d']}; }}
+.cover .roll {{ display: block; font-weight: 400; color: {C['text2']}; font-size: 8.5pt; }}
+.cover .roll.todo, .todo {{ color: {C['faint']}; font-style: italic; font-weight: 400; }}
+code.wrap {{ white-space: normal; font-size: 7.8pt; }}
 
 /* cover */
 .cover {{ height: 297mm; width: 210mm; padding: 26mm 22mm 22mm; display: flex; flex-direction: column; break-after: page;
@@ -265,21 +291,23 @@ SUN = (f"<svg class='sun' viewBox='0 0 32 32'><circle cx='16' cy='16' r='7' fill
        "<path d='M16 2v4M16 26v4M2 16h4M26 16h4M6 6l2.8 2.8M23.2 23.2 26 26M6 26l2.8-2.8M23.2 8.8 26 6'/></g></svg>")
 
 
-def cover():
+def cover(eyebrow, lede):
     def row(label, value, hint):
         return f"<dt>{label}</dt>" + (f"<dd>{html.escape(value)}</dd>" if value else f"<dd class='todo'>{hint}</dd>")
+    members = "".join(
+        f"<dt>{'Team' if i == 0 else ''}</dt><dd>{html.escape(name)} "
+        + (f"<span class='roll'>{html.escape(roll)}</span>" if roll else "<span class='roll todo'>roll number: add in build_report.py</span>")
+        + "</dd>" for i, (name, roll, _) in enumerate(TEAM))
     return f"""<section class='cover'>
 <div class='brand'>{SUN.replace("class='sun'", "width='20'")}LeadBot <i>FYP</i></div>
 {SUN}
-<div class='eyebrow'>Final Year Project Report</div>
+<div class='eyebrow'>{html.escape(eyebrow)}</div>
 <h1>{html.escape(TITLE)}</h1>
 <div class='sub'>{html.escape(SUBTITLE)}</div>
 <div class='rule'></div>
-<p class='lede'>A website chatbot that answers from a business's own knowledge base in English and Roman Urdu,
-captures and scores leads, and gives the owner a pipeline, an audit log and four ways to train the bot.</p>
+<p class='lede'>{html.escape(lede)}</p>
 <dl>
-{row("Student", STUDENT, "add in build_report.py")}
-{row("Roll number", ROLL_NUMBER, "add in build_report.py")}
+{members}
 {row("Supervisor", SUPERVISOR, "add in build_report.py")}
 {row("Department", DEPARTMENT, "add in build_report.py")}
 {row("University", UNIVERSITY, "add in build_report.py")}
@@ -288,6 +316,15 @@ captures and scores leads, and gives the owner a pipeline, an audit log and four
 {row("Source code", CODE_URL, "")}
 </dl>
 </section>"""
+
+
+def team_table():
+    rows = "".join(
+        f"<tr><td>{html.escape(name)}</td><td>{html.escape(roll) if roll else '<span class=todo>add</span>'}</td>"
+        f"<td>{html.escape(area)}</td><td><code class='wrap'>{html.escape(TEAM_FILES.get(name, ''))}</code></td></tr>"
+        for name, roll, area in TEAM)
+    return ("<table><thead><tr><th>Member</th><th>Roll number</th><th>Area owned</th><th>Main files</th></tr></thead>"
+            f"<tbody>{rows}</tbody></table>")
 
 
 def add_swatches(body):
@@ -309,40 +346,44 @@ def add_swatches(body):
     return re.sub(r"<table>.*?</table>", per_table, body, flags=re.S)
 
 
-def build_html():
-    md = SOURCE.read_text(encoding="utf-8")
+def build_html(source, out_html, eyebrow, lede, footer, with_figures):
+    md = (HERE / source).read_text(encoding="utf-8")
     body = markdown.markdown(md, extensions=["tables", "fenced_code", "sane_lists", "toc"])
 
-    weights = live_weights()
-    retrieval, threshold = live_retrieval()
-    n_cov = sum(1 for r in retrieval if r[1])
-    figs = {
-        "architecture": figure(fig_architecture(), "LeadBot architecture: ten components in one server process.", 1),
-        "weights": figure(fig_weights(weights), f"Classifier weights, read from models/lead_classifier.joblib ({len(weights)} features, trained on all 62 labelled leads).", 2),
-        "retrieval": figure(fig_retrieval(retrieval, threshold),
-                            f"Retrieval scores computed by app/rag.py on the BrightPath knowledge base when this report was built: "
-                            f"{n_cov} answerable and {len(retrieval) - n_cov} off-topic questions.", 3),
-    }
-    for key, fig in figs.items():
-        body = body.replace(f"<p>[[FIG:{key}]]</p>", fig)
+    if with_figures:
+        weights = live_weights()
+        retrieval, threshold = live_retrieval()
+        n_cov = sum(1 for r in retrieval if r[1])
+        figs = {
+            "architecture": figure(fig_architecture(), "LeadBot architecture: ten components in one server process.", 1),
+            "weights": figure(fig_weights(weights), f"Classifier weights, read from models/lead_classifier.joblib ({len(weights)} features, trained on all 62 labelled leads).", 2),
+            "retrieval": figure(fig_retrieval(retrieval, threshold),
+                                f"Retrieval scores computed by app/rag.py on the BrightPath knowledge base when this report was built: "
+                                f"{n_cov} answerable and {len(retrieval) - n_cov} off-topic questions.", 3),
+        }
+        for key, fig in figs.items():
+            body = body.replace(f"<p>[[FIG:{key}]]</p>", fig)
+    body = body.replace("<p>[[ARCH]]</p>", figure(fig_architecture(), "LeadBot architecture: who owns which box.", 1))
     body = body.replace("<p>[[FORMULA]]</p>",
                         "<div class='formula'>score = (1 &minus; w) &times; rules + w &times; 100 &times; P(qualified)</div>")
+    body = body.replace("<p>[[TEAM_TABLE]]</p>", team_table())
     assert "[[" not in body, "a placeholder was not replaced"
 
     # section numbers in green
     body = re.sub(r"<(h[23]) id=\"([^\"]+)\">((?:[A-Z]\.)?\d+(?:\.\d+)?) ", r"<\1 id='\2'><span class='num'>\3</span>", body)
     body = add_swatches(body)
-    # appendix: questions as headings of their answers
-    body = body.replace("<h2 id=\"appendix-a-viva-questions-and-answers\">", "<div class='qa'><h2 id='appendix-a-viva-questions-and-answers'>") + "</div>"
+    # a paragraph that starts with a bold question = one Q&A item: the question reads as its heading
+    body = re.sub(r"<p><strong>([^<]*\?)</strong>", r"<p class='qa-item'><strong class='q'>\1</strong>", body)
 
     heads = re.findall(r"<h2 id=['\"]([^'\"]+)['\"]>(?:<span class='num'>([^<]+)</span>)?([^<]+)</h2>", body)
     toc = "".join(f"<li><span>{num or ''}</span><a href='#{hid}'>{html.escape(name.strip())}</a></li>" for hid, num, name in heads)
-    page = f"""<!doctype html><html lang='en'><head><meta charset='utf-8'><title>LeadBot: Final Year Project Report</title>
-<style>{CSS}</style></head><body>{cover()}
+    css = CSS.replace("Final Year Project Report", footer)
+    page = f"""<!doctype html><html lang='en'><head><meta charset='utf-8'><title>LeadBot: {html.escape(footer)}</title>
+<style>{css}</style></head><body>{cover(eyebrow, lede)}
 <section class='toc'><h2>Contents</h2><ol>{toc}</ol></section>
 {body}</body></html>"""
-    OUT_HTML.write_text(page, encoding="utf-8")
-    return OUT_HTML
+    out_html.write_text(page, encoding="utf-8")
+    return out_html
 
 
 def find_browser():
@@ -353,29 +394,37 @@ def find_browser():
     return shutil.which("msedge") or shutil.which("google-chrome") or shutil.which("chromium")
 
 
-def print_pdf(html_path):
+def print_pdf(html_path, out_pdf):
     browser = find_browser()
     if not browser:
         sys.exit("No Edge or Chrome found: open the .html file in a browser and print it to PDF.")
-    OUT_PDF.unlink(missing_ok=True)
+    tmp = out_pdf.with_suffix(".tmp.pdf")  # printed here first, so an open copy of the old PDF is not a problem
+    tmp.unlink(missing_ok=True)
     profile = tempfile.mkdtemp(prefix="leadbot-pdf-")  # own profile: never clashes with an open browser
     subprocess.run([browser, "--headless=new", "--disable-gpu", "--no-pdf-header-footer", "--run-all-compositor-stages-before-draw",
-                    f"--user-data-dir={profile}", "--virtual-time-budget=8000", f"--print-to-pdf={OUT_PDF}", html_path.as_uri()],
+                    f"--user-data-dir={profile}", "--virtual-time-budget=8000", f"--print-to-pdf={tmp}", html_path.as_uri()],
                    capture_output=True, timeout=180)
     # the browser can return before the file is fully written: wait until its size stops changing
     last = -1
     for _ in range(120):
-        size = OUT_PDF.stat().st_size if OUT_PDF.exists() else -1
+        size = tmp.stat().st_size if tmp.exists() else -1
         if size > 0 and size == last:
             break
         last = size
         time.sleep(0.5)
     shutil.rmtree(profile, ignore_errors=True)
-    if not OUT_PDF.exists():
+    if not tmp.exists():
         sys.exit("The browser did not write the PDF: open the .html file in a browser and print it to PDF.")
-    return OUT_PDF
+    try:
+        os.replace(tmp, out_pdf)
+    except PermissionError:  # the old PDF is open in a viewer: keep the new one next to it
+        out_pdf = out_pdf.with_name(out_pdf.stem + " (new).pdf")
+        os.replace(tmp, out_pdf)
+        print(f"  {out_pdf.name}: the previous PDF is open in another program, so the new one was saved beside it")
+    return out_pdf
 
 
 if __name__ == "__main__":
-    pdf = print_pdf(build_html())
-    print(f"Wrote {pdf} ({pdf.stat().st_size // 1024} KB)")
+    for source, name, eyebrow, lede, footer, figs in DOCS:
+        pdf = print_pdf(build_html(source, HERE / f"{name}.html", eyebrow, lede, footer, figs), HERE / f"{name}.pdf")
+        print(f"Wrote {pdf} ({pdf.stat().st_size // 1024} KB)")
