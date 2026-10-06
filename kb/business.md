@@ -9,6 +9,9 @@ We offer rooftop solar panel installation, hybrid inverter setup, lithium batter
 ## Pricing
 A 5 kW on-grid system starts from about Rs 650,000. A 10 kW hybrid system with battery backup starts from about Rs 1,900,000. Final price depends on roof size, panel brand, and battery choice. We give a free written quote after a site visit.
 
+## Packages
+We offer three packages: a 5 kW on-grid system starting from about Rs 650,000, a 10 kW hybrid system with battery backup starting from about Rs 1,900,000, and a yearly maintenance plan for homes at Rs 15,000 per year. Final price depends on roof size, panel brand, and battery choice. We give a free written quote after a site visit.
+
 ## Installation time
 Most home installations take 3 to 5 days after the site visit is approved. Net metering approval usually takes 4 to 8 weeks and we handle the paperwork for you.
 
