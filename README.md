@@ -24,7 +24,9 @@ uvicorn app.main:app --reload
 4. `scoring.py` computes an explainable 0-100 rule score; `classifier.py` (logistic regression, trained by `train_classifier.py` on `data/labeled_leads.csv`) predicts how likely the lead is qualified. The final score is a blend of both (`ML_WEIGHT`, default 0.5) and sets the hot/warm/cold tier. With no trained model it uses rules only.
 5. Every chat becomes a lead in the **admin panel** (`/admin`):
    - **Overview**: totals for hot / warm / cold / won / lost, hot leads to call now, pipeline, latest conversations.
-   - **Leads**: filter by Hot, Warm, Cold, Won, Lost, or search; open a lead to see contact details, the score breakdown and reason, the full conversation, set its status (New, Contacted, Won, Lost), add notes, or delete it.
+   - **Pipeline**: a deals board with one column per stage (New, Contacted, Site visit booked, Quote sent, Won, Lost). Each card shows the lead's hot / warm / cold tag and score; drag a card to move the deal. Visitors without a phone or email are hidden unless switched on.
+   - **Leads**: filter by Hot, Warm, Cold, Won, Lost, or search; open a lead to see contact details, the score breakdown and reason, the full conversation, set its stage, add notes, or delete it.
+   - **Audit log**: every owner action (stage changes, notes, deletes, knowledge-base edits, uploads, logins and failed logins) and key events (new lead, lead turned hot, AI failed), filterable by type.
    - **Bot & knowledge**: bot mode, scoring mode, a **Test the knowledge** box (shows which topics a question matches and how confidently), and four ways to train the knowledge base. Every change applies on the next message:
      - **Q&A**: question + other ways to ask it (e.g. Roman Urdu) + answer.
      - **Unanswered**: questions visitors asked that the knowledge base could not answer confidently (best match below 30%). The bot says it is not sure instead of guessing; the owner answers once and the bot knows it from then on.

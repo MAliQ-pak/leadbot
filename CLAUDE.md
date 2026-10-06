@@ -19,8 +19,8 @@ Demo website: http://localhost:8000  |  Admin panel: http://localhost:8000/admin
 - train_classifier.py  trains from data/labeled_leads.csv -> models/lead_classifier.joblib (re-run after editing data)
 - app/crm.py      optional webhook sync, OFF unless CRM_ENABLED=true; falls back to crm_mock.jsonl
 - app/auth.py     owner login (HTTP Basic) for /admin, /chat and admin APIs; ADMIN_PASSWORD unset = localhost only
-- app/db.py       SQLite (leadbot.db); leads have status new/contacted/won/lost + notes
-- static/         demo website (index.html, site.css), chat widget (widget.js), bot tester (chat.*), admin panel (admin.html/.css/.js, admin-kb.js = KB training)
+- app/db.py       SQLite (leadbot.db); leads have a deal stage (db.STATUSES: new, contacted, site_visit, quote_sent, won, lost) + notes; audit table via db.audit()
+- static/         demo website (index.html, site.css), chat widget (widget.js), bot tester (chat.*), admin panel (admin.html/.css/.js, admin-pipeline.js = deals board + audit log, admin-kb.js = KB training)
 - kb/business.md  sample business (BrightPath Solar); replace with your own
 
 ## Rules for changes

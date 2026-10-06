@@ -1,9 +1,12 @@
-/* LeadBot admin panel: overview, lead management and knowledge-base editor. */
+/* LeadBot admin panel: overview and lead management. Pipeline board + audit log: admin-pipeline.js; knowledge base: admin-kb.js. */
 const $ = id => document.getElementById(id);
 const esc = s => (s == null ? "" : String(s)).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const FIELDS = ["name", "phone", "email", "need", "budget", "timeline"];
-const STATUSES = ["new", "contacted", "won", "lost"];
-const OPEN = l => l.status === "new" || l.status === "contacted";
+// Deal stages, left to right on the Pipeline board (same list as db.STATUSES on the server)
+const STATUSES = ["new", "contacted", "site_visit", "quote_sent", "won", "lost"];
+const STATUS_LABEL = { new: "New", contacted: "Contacted", site_visit: "Site visit booked", quote_sent: "Quote sent", won: "Won", lost: "Lost" };
+const stageName = s => STATUS_LABEL[s] || s;
+const OPEN = l => l.status !== "won" && l.status !== "lost";
 const TABS = [
   ["all", "All", () => true],
   ["hot", "Hot", l => OPEN(l) && l.tier === "hot"],
@@ -40,7 +43,7 @@ async function api(path, opts) {
 }
 
 // ---------- routing ----------
-const TITLES = { overview: "Overview", leads: "Leads", bot: "Bot & knowledge" };
+const TITLES = { overview: "Overview", pipeline: "Pipeline", leads: "Leads", audit: "Audit log", bot: "Bot & knowledge" };
 function route() {
   const page = (location.hash || "#overview").slice(1);
   const name = TITLES[page] ? page : "overview";
@@ -48,6 +51,8 @@ function route() {
   document.querySelectorAll(".side nav a").forEach(a => a.classList.toggle("active", a.dataset.page === name));
   $("page-title").textContent = TITLES[name];
   if (name === "bot") loadBot();
+  if (name === "pipeline" && window.renderBoard) window.renderBoard();
+  if (name === "audit" && window.loadAudit) window.loadAudit();
 }
 window.addEventListener("hashchange", route);
 
@@ -55,8 +60,11 @@ window.addEventListener("hashchange", route);
 async function load() {
   try { leads = await api("/api/leads"); } catch (e) { return; }
   $("nav-count").textContent = leads.length;
+  $("nav-open").textContent = leads.filter(l => OPEN(l) && (l.phone || l.email)).length;
   renderOverview();
   renderLeads();
+  if (window.renderBoard) window.renderBoard();
+  if (location.hash === "#audit" && window.loadAudit) window.loadAudit();
   if (openSid) refreshDrawer();
 }
 
@@ -80,7 +88,7 @@ function renderOverview() {
   const total = leads.length || 1;
   $("pipeline").innerHTML = STATUSES.map(s => {
     const c = n(l => l.status === s);
-    return `<div class="pipe"><div class="bar-label"><span class="pill ${s}">${s}</span><span>${c}</span></div>
+    return `<div class="pipe"><div class="bar-label"><span class="pill ${s}">${stageName(s)}</span><span>${c}</span></div>
       <div class="bar"><i style="width:${(c / total) * 100}%;background:var(--${s})"></i></div></div>`;
   }).join("");
 }
@@ -105,7 +113,7 @@ function renderLeads() {
     <tr data-sid="${esc(l.session_id)}">
       <td><b>${esc(displayName(l))}</b><span class="sub">${esc(contact(l))}</span></td>
       <td>${scoreCell(l)}</td>${cell(l.need)}${cell(l.budget)}${cell(l.timeline)}
-      <td><span class="pill ${esc(l.status)}">${esc(l.status)}</span></td>
+      <td><span class="pill ${esc(l.status)}">${esc(stageName(l.status))}</span></td>
       <td>${ago(l.updated)}<span class="sub">${l.messages || 0} messages</span></td>
     </tr>`).join("") || `<tr><td colspan="7" class="empty">No leads here${q ? " match your search" : " yet"}.</td></tr>`;
 }
@@ -141,7 +149,7 @@ async function refreshDrawer() {
   $("d-fields").innerHTML = FIELDS.map(f =>
     `<dt>${f}</dt><dd class="${l[f] ? "" : "none"}">${esc(l[f]) || "not shared"}</dd>`).join("");
   $("d-status").innerHTML = STATUSES.map(s =>
-    `<button data-status="${s}" class="${s} ${l.status === s ? "active" : ""}">${s}</button>`).join("");
+    `<button data-status="${s}" class="${s} ${l.status === s ? "active" : ""}">${stageName(s)}</button>`).join("");
   if (!$("d-notes").dataset.dirty) $("d-notes").value = l.notes || "";
 
   // only reload the transcript when new messages arrived

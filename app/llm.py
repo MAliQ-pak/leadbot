@@ -208,7 +208,9 @@ def _gemini_post(body):
     """Send the request to GEMINI_MODEL; if it is overloaded (503), out of free quota (429) or too slow,
     try the lighter GEMINI_FALLBACK_MODEL before giving up (then the offline bot answers)."""
     import httpx
-    models = [os.getenv("GEMINI_MODEL", "gemini-3.8-flash"), os.getenv("GEMINI_FALLBACK_MODEL", "gemini-3.5-flash-lite")]
+    # GEMINI_FALLBACK_MODEL may list several models, comma-separated, tried in order
+    models = [os.getenv("GEMINI_MODEL", "gemini-3.8-flash")] + \
+        os.getenv("GEMINI_FALLBACK_MODEL", "gemini-3.5-flash-lite,gemini-flash-lite-latest").split(",")
     headers = {"x-goog-api-key": os.getenv("GEMINI_API_KEY", "").strip()}
     problem = "no model available"
     for model in dict.fromkeys(m.strip() for m in models if m.strip()):  # unique, in order

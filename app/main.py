@@ -3,7 +3,7 @@ import os
 import time
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -85,9 +85,11 @@ def chat(body: ChatIn):
         context = []
 
     lead = db.get_lead(sid)
+    is_new, was_tier = "created" not in lead, lead.get("tier")
     # one visitor can't run up the Claude bill: long chats continue with the offline bot
     within_limit = db.count_user_messages(sid) <= int(os.getenv("MAX_CLAUDE_MESSAGES_PER_CHAT", "30"))
     reply, updates = llm.respond(hist, context, lead, allow_llm=within_limit)
+    _audit_ai_failure()
     updates = {k: v for k, v in updates.items() if lead.get(k) != v}  # only genuinely new/changed
     lead.update(updates)
 
@@ -101,9 +103,28 @@ def chat(body: ChatIn):
 
     db.add_message(sid, "assistant", reply)
     db.save_lead(lead)
+    if is_new:
+        db.audit("lead", "New lead", f"first message: {text[:80]}", target=sid, actor="visitor")
+    if lead["tier"] == "hot" and was_tier != "hot":
+        db.audit("lead", "Lead turned hot", f"{_who_is(lead)} scored {lead['score']}", target=sid, actor="system")
     return {"reply": reply, "score": lead["score"], "tier": lead["tier"],
             "rule_score": lead["rule_score"], "ml_score": lead["ml_score"], "reason": lead["reason"],
             "lead": {k: lead.get(k) for k in db.LEAD_FIELDS}}
+
+
+_logged_error = None
+
+
+def _audit_ai_failure():
+    """Log an AI failure once (the 60 s cool-down means at most one entry a minute)."""
+    global _logged_error
+    if llm.LAST_ERROR is not None and llm.LAST_ERROR is not _logged_error:
+        _logged_error = llm.LAST_ERROR
+        db.audit("system", "AI failed, offline bot answered", llm.LAST_ERROR["message"], actor="system")
+
+
+def _who_is(lead):
+    return lead.get("name") or lead.get("phone") or "Anonymous visitor"
 
 
 def score_and_tier(lead, user_text):
@@ -128,17 +149,24 @@ def leads():
 
 
 @app.patch("/api/leads/{session_id}", dependencies=auth.ADMIN)
-def update_lead(session_id: str, body: LeadUpdate):
+def update_lead(session_id: str, body: LeadUpdate, who: str = Depends(auth.require_admin)):
     if body.status is not None and body.status not in db.STATUSES:
         raise HTTPException(400, f"status must be one of {db.STATUSES}")
+    before = db.get_lead(session_id)
     if not db.update_lead(session_id, body.status, body.notes):
         raise HTTPException(404, "not found")
+    if body.status is not None and body.status != before.get("status"):
+        db.audit("lead", "Stage changed", f"{_who_is(before)}: {db.STATUS_NAMES.get(before.get('status'), before.get('status'))} → {db.STATUS_NAMES[body.status]}", session_id, who)
+    if body.notes is not None and body.notes != (before.get("notes") or ""):
+        db.audit("lead", "Notes edited", _who_is(before), session_id, who)
     return db.get_lead(session_id)
 
 
 @app.delete("/api/leads/{session_id}", dependencies=auth.ADMIN)
-def delete_lead(session_id: str):
+def delete_lead(session_id: str, who: str = Depends(auth.require_admin)):
+    before = db.get_lead(session_id)
     db.delete_lead(session_id)
+    db.audit("lead", "Lead deleted", _who_is(before), session_id, who)
     return {"ok": True}
 
 
@@ -167,10 +195,11 @@ def get_kb_text():
 
 
 @app.put("/api/kb", dependencies=auth.ADMIN)
-def save_kb_text(body: KbIn):
+def save_kb_text(body: KbIn, who: str = Depends(auth.require_admin)):
     # newline="\n" keeps the file's Unix line endings on Windows too
     KB_FILE.write_text(body.text.replace("\r\n", "\n"), encoding="utf-8", newline="\n")
     rag.reload_kb()
+    db.audit("kb", "Main text edited", f"{len(body.text)} characters", "kb/business.md", who)
     return get_kb_text()
 
 
@@ -186,33 +215,37 @@ def test_kb(q: str):
 
 
 @app.post("/api/kb/faq", dependencies=auth.ADMIN)
-def add_faq(body: FaqIn):
+def add_faq(body: FaqIn, who: str = Depends(auth.require_admin)):
     db.execute("INSERT INTO kb_faq(question, variants, answer, source, created) VALUES (?,?,?,?,?)",
                (body.question.strip(), body.variants.strip(), body.answer.strip(),
                 "unanswered" if body.unanswered_id else "manual", time.time()))
     if body.unanswered_id:
         db.close_unanswered(body.unanswered_id, "answered")
+    db.audit("kb", "Answered a visitor question" if body.unanswered_id else "Q&A added", body.question.strip(), actor=who)
     rag.reload_kb()
     return get_kb_text()
 
 
 @app.put("/api/kb/faq/{faq_id}", dependencies=auth.ADMIN)
-def edit_faq(faq_id: int, body: FaqIn):
+def edit_faq(faq_id: int, body: FaqIn, who: str = Depends(auth.require_admin)):
     db.execute("UPDATE kb_faq SET question=?, variants=?, answer=? WHERE id=?",
                (body.question.strip(), body.variants.strip(), body.answer.strip(), faq_id))
+    db.audit("kb", "Q&A edited", body.question.strip(), str(faq_id), who)
     rag.reload_kb()
     return get_kb_text()
 
 
 @app.delete("/api/kb/faq/{faq_id}", dependencies=auth.ADMIN)
-def delete_faq(faq_id: int):
+def delete_faq(faq_id: int, who: str = Depends(auth.require_admin)):
+    old = db.rows("SELECT question FROM kb_faq WHERE id=?", (faq_id,))
     db.execute("DELETE FROM kb_faq WHERE id=?", (faq_id,))
+    db.audit("kb", "Q&A deleted", old[0]["question"] if old else f"id {faq_id}", str(faq_id), who)
     rag.reload_kb()
     return get_kb_text()
 
 
 @app.post("/api/kb/upload", dependencies=auth.ADMIN)
-def upload_doc(body: UploadIn):
+def upload_doc(body: UploadIn, who: str = Depends(auth.require_admin)):
     try:
         data = base64.b64decode(body.data, validate=True)
     except ValueError:
@@ -221,16 +254,20 @@ def upload_doc(body: UploadIn):
         text = ingest.extract_file(body.name, data)
     except ingest.IngestError as e:
         raise HTTPException(400, str(e))
-    return _add_doc(body.name, "file", body.name, text)
+    result = _add_doc(body.name, "file", body.name, text)
+    db.audit("kb", "Document uploaded", f"{body.name} ({len(text)} characters)", actor=who)
+    return result
 
 
 @app.post("/api/kb/url", dependencies=auth.ADMIN)
-def import_url(body: UrlIn):
+def import_url(body: UrlIn, who: str = Depends(auth.require_admin)):
     try:
         title, text = ingest.fetch_url(body.url.strip())
     except ingest.IngestError as e:
         raise HTTPException(400, str(e))
-    return _add_doc(title[:120], "url", body.url.strip(), text)
+    result = _add_doc(title[:120], "url", body.url.strip(), text)
+    db.audit("kb", "Web page imported", body.url.strip(), actor=who)
+    return result
 
 
 def _add_doc(name, kind, origin, text):
@@ -251,16 +288,25 @@ def get_doc(doc_id: int):
 
 
 @app.delete("/api/kb/docs/{doc_id}", dependencies=auth.ADMIN)
-def delete_doc(doc_id: int):
+def delete_doc(doc_id: int, who: str = Depends(auth.require_admin)):
+    old = db.rows("SELECT name FROM kb_docs WHERE id=?", (doc_id,))
     db.execute("DELETE FROM kb_docs WHERE id=?", (doc_id,))
+    db.audit("kb", "Document deleted", old[0]["name"] if old else f"id {doc_id}", str(doc_id), who)
     rag.reload_kb()
     return get_kb_text()
 
 
 @app.post("/api/kb/unanswered/{item_id}/dismiss", dependencies=auth.ADMIN)
-def dismiss_unanswered(item_id: int):
+def dismiss_unanswered(item_id: int, who: str = Depends(auth.require_admin)):
+    old = db.rows("SELECT question FROM unanswered WHERE id=?", (item_id,))
     db.close_unanswered(item_id, "dismissed")
+    db.audit("kb", "Unanswered question dismissed", old[0]["question"] if old else "", str(item_id), who)
     return get_kb_text()
+
+
+@app.get("/api/audit", dependencies=auth.ADMIN)
+def audit_log(kind: str | None = None):
+    return db.audit_list(kind)
 
 
 @app.get("/api/health")

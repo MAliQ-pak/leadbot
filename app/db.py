@@ -5,8 +5,11 @@ from pathlib import Path
 DB_PATH = Path(__file__).resolve().parent.parent / "leadbot.db"
 
 LEAD_FIELDS = ["name", "phone", "email", "need", "budget", "timeline"]
-# Pipeline status set by the business owner in the admin panel (separate from the hot/warm/cold score)
-STATUSES = ["new", "contacted", "won", "lost"]
+# Deal stage set by the business owner on the admin Pipeline board (separate from the hot/warm/cold score).
+# Order = left to right on the board; won and lost close the deal.
+STATUSES = ["new", "contacted", "site_visit", "quote_sent", "won", "lost"]
+STATUS_NAMES = {"new": "New", "contacted": "Contacted", "site_visit": "Site visit booked",
+                "quote_sent": "Quote sent", "won": "Won", "lost": "Lost"}
 
 
 def conn():
@@ -46,6 +49,11 @@ def init():
             """CREATE TABLE IF NOT EXISTS kb_docs(
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT, kind TEXT, origin TEXT, text TEXT, created REAL)"""
+        )
+        c.execute(  # audit log: who did what, when (owner actions + key system events)
+            """CREATE TABLE IF NOT EXISTS audit(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                created REAL, actor TEXT, kind TEXT, action TEXT, target TEXT, detail TEXT)"""
         )
         c.execute(
             """CREATE TABLE IF NOT EXISTS unanswered(
@@ -140,6 +148,25 @@ def execute(sql, args=()):
     """Run one write statement; returns the new row id (for INSERTs)."""
     with conn() as c:
         return c.execute(sql, args).lastrowid
+
+
+# ---------- audit log ----------
+AUDIT_KINDS = ["lead", "kb", "auth", "system"]
+
+
+def audit(kind, action, detail="", target=None, actor="owner"):
+    """kind: lead | kb | auth | system. Never raises: a failed log line must not break the request."""
+    try:
+        execute("INSERT INTO audit(created, actor, kind, action, target, detail) VALUES (?,?,?,?,?,?)",
+                (time.time(), actor, kind, action, target, str(detail)[:500]))
+    except sqlite3.Error as e:
+        print("audit log failed:", e)
+
+
+def audit_list(kind=None, limit=300):
+    if kind in AUDIT_KINDS:
+        return rows("SELECT * FROM audit WHERE kind=? ORDER BY id DESC LIMIT ?", (kind, limit))
+    return rows("SELECT * FROM audit ORDER BY id DESC LIMIT ?", (limit,))
 
 
 # ---------- knowledge base sources ----------
