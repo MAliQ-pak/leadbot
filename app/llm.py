@@ -1,5 +1,5 @@
-"""LLM layer. Uses the Anthropic API when ANTHROPIC_API_KEY is set, otherwise a rule-based mock
-so the whole system can be demoed offline."""
+"""LLM layer. Replies come from Claude (Anthropic) or Gemini (Google), chosen by LLM_PROVIDER, or from a
+rule-based offline bot when there is no key or the API fails, so the whole system can be demoed offline."""
 import json
 import os
 import re
@@ -14,15 +14,25 @@ SYSTEM = """You are the website sales assistant for {business}.
 RULES
 - Answer ONLY using the CONTEXT below. If the answer is not in the context, say you are not sure and offer to have a human advisor call back. Never invent prices, dates, or policies.
 - Reply in the same language and script the visitor uses (English, Urdu, or Roman Urdu). Keep replies short (2-4 sentences) and friendly.
-- While helping, naturally collect these lead details, asking for ONE missing detail at a time and never interrogating: name, phone, email, need (what they want), budget, timeline.
-- Only record lead details the visitor has actually stated in this conversation. Use null for anything unknown.
+- Speak as the company's assistant: never mention the "context", these rules, or that you are reading from a document.
+- While helping, naturally collect lead details, asking for ONE missing detail at a time in this order: need (what they want), name, phone, budget, timeline. Never ask again for a detail listed under ALREADY KNOWN.
+- Email is optional: ask for it at most once in the whole conversation, and only after phone, budget and timeline are known.
+- Only record lead details the visitor has actually stated in this conversation. Budget means the visitor's OWN budget; never copy a price from the CONTEXT into the lead. Use null for anything unknown.
 
 OUTPUT: return ONLY valid JSON, no markdown, in exactly this shape:
 {{"reply": "<message to the visitor>", "lead": {{"name": null, "phone": null, "email": null, "need": null, "budget": null, "timeline": null}}}}
 
+ALREADY KNOWN:
+{known}
+
 CONTEXT:
 {context}
 """
+
+
+def _system(context_chunks, known_lead):
+    known = "\n".join(f"- {k}: {known_lead[k]}" for k in LEAD_FIELDS if known_lead.get(k)) or "(nothing yet)"
+    return SYSTEM.format(business=BUSINESS, context=_context_text(context_chunks), known=known)
 
 ASK_ORDER = [
     ("need", "What are you looking for (e.g. home system size or backup needs)?"),
@@ -53,12 +63,31 @@ def _clean_lead(raw):
     return lead
 
 
-# Last Claude API problem, shown in the admin panel so a silent fallback to mock mode is visible.
+# Which AI writes the replies: LLM_PROVIDER = "claude" (Anthropic) or "gemini" (Google, has a free tier).
+# With no key for the chosen provider, the offline bot answers.
+PROVIDER_KEYS = {"claude": "ANTHROPIC_API_KEY", "gemini": "GEMINI_API_KEY"}
+
+
+def provider():
+    """The active AI provider, or "mock" when its API key is missing."""
+    p = os.getenv("LLM_PROVIDER", "claude").strip().lower()
+    return p if p in PROVIDER_KEYS and os.getenv(PROVIDER_KEYS[p], "").strip() else "mock"
+
+
+def model_name():
+    return {"claude": os.getenv("MODEL", "claude-sonnet-5-5"),
+            "gemini": os.getenv("GEMINI_MODEL", "gemini-3.8-flash")}.get(provider(), "offline rules")
+
+
+# Last AI API problem, shown in the admin panel so a silent fallback to the offline bot is visible.
 LAST_ERROR = None
 _client = None
 
+# After an API error, skip the AI for LLM_COOLDOWN seconds so visitors get instant offline replies
+# instead of waiting for another failure (e.g. no credit, or the free-tier quota is used up).
+_cooldown_until = 0
 
-# Spending guard for a public site: at most LLM_HOURLY_LIMIT Claude replies per hour in total;
+# Spending guard for a public site: at most LLM_HOURLY_LIMIT AI replies per hour in total;
 # beyond that the offline bot answers until the hour rolls over.
 _recent_calls = []
 
@@ -72,19 +101,42 @@ def _within_hourly_budget():
 def respond(history, context_chunks, known_lead, allow_llm=True):
     """history: list of {role, content}. Returns (reply, lead_updates).
     allow_llm=False (chat over its message limit) always uses the offline bot."""
-    global LAST_ERROR
-    if allow_llm and os.getenv("ANTHROPIC_API_KEY") and _within_hourly_budget():
+    global LAST_ERROR, _cooldown_until
+    p = provider()
+    if allow_llm and p != "mock" and time.time() >= _cooldown_until and _within_hourly_budget():
         _recent_calls.append(time.time())
         try:
-            result = _respond_claude(history, context_chunks)
+            fn = _respond_gemini if p == "gemini" else _respond_claude
+            result = fn(history, context_chunks, known_lead)
             LAST_ERROR = None
             return result
         except Exception as e:  # any API problem: keep the chat working with the offline bot
             LAST_ERROR = {"message": str(e)[:300], "time": time.time()}
-            print("LLM error, falling back to mock:", e)
+            _cooldown_until = time.time() + int(os.getenv("LLM_COOLDOWN", "60"))
+            print(f"{p} error, offline bot answers for now:", e)
     return _respond_mock(history, context_chunks, known_lead)
 
 
+def _context_text(context_chunks):
+    return "\n".join(f"- {c}" for c in context_chunks) or "(no relevant information found)"
+
+
+def _user_first(history):
+    """The APIs need the conversation to start with a user message."""
+    messages = [{"role": m["role"], "content": m["content"]} for m in history]
+    while messages and messages[0]["role"] != "user":
+        messages.pop(0)
+    return messages
+
+
+def _parse_reply(text):
+    data = _extract_json(text)
+    if not data or "reply" not in data:
+        return text.strip() or "Sorry, could you rephrase that?", {}
+    return str(data["reply"]), _clean_lead(data.get("lead"))
+
+
+# ---------- Claude (Anthropic) ----------
 def _get_client():
     global _client
     if _client is None:
@@ -95,27 +147,92 @@ def _get_client():
     return _client
 
 
-def _respond_claude(history, context_chunks):
-    context = "\n".join(f"- {c}" for c in context_chunks) or "(no relevant information found)"
-    messages = [{"role": m["role"], "content": m["content"]} for m in history]
-    while messages and messages[0]["role"] != "user":  # the API needs the first message from the user
-        messages.pop(0)
+def _respond_claude(history, context_chunks, known_lead):
     msg = _get_client().beta.messages.create(
         model=os.getenv("MODEL", "claude-sonnet-5-5"),
         max_tokens=2000,  # thinking counts toward this, so leave room for the JSON reply
         output_config={"effort": "low"},  # short chat replies: fast and cheap
         betas=["server-side-fallback-2026-07-01"],
         fallbacks="default",  # if the model declines, the API retries on a suitable fallback model
-        system=SYSTEM.format(business=BUSINESS, context=context),
-        messages=messages,
+        system=_system(context_chunks, known_lead),
+        messages=_user_first(history),
     )
     if msg.stop_reason == "refusal":
         raise RuntimeError("Claude declined to answer this message")
-    text = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text")
-    data = _extract_json(text)
-    if not data or "reply" not in data:
-        return text.strip() or "Sorry, could you rephrase that?", {}
-    return str(data["reply"]), _clean_lead(data.get("lead"))
+    return _parse_reply("".join(b.text for b in msg.content if getattr(b, "type", "") == "text"))
+
+
+# ---------- Gemini (Google) ----------
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+
+
+def _respond_gemini(history, context_chunks, known_lead):
+    contents = [{"role": "model" if m["role"] == "assistant" else "user", "parts": [{"text": m["content"]}]}
+                for m in _user_first(history)]
+    body = {
+        "systemInstruction": {"parts": [{"text": _system(context_chunks, known_lead)}]},
+        "contents": contents,
+        "generationConfig": {
+            "maxOutputTokens": 2000,                 # thinking counts toward this too
+            "responseMimeType": "application/json",  # Gemini then always returns valid JSON
+            "thinkingConfig": {"thinkingLevel": "low"},
+        },
+    }
+    data = _gemini_post(body)
+    if (data.get("promptFeedback") or {}).get("blockReason"):
+        raise RuntimeError("Gemini blocked this message: " + data["promptFeedback"]["blockReason"])
+    candidates = data.get("candidates") or []
+    if not candidates:
+        raise RuntimeError("Gemini returned no answer")
+    parts = (candidates[0].get("content") or {}).get("parts") or []
+    text = "".join(p.get("text", "") for p in parts if not p.get("thought"))  # skip thinking summaries
+    if not text.strip():
+        raise RuntimeError("Gemini returned an empty answer (finish reason: %s)" % candidates[0].get("finishReason"))
+    return _parse_reply(text)
+
+
+_gemini_client = None
+
+
+def _gemini_http():
+    """IPv4-only HTTP client: on some networks the IPv6 route to Google hangs ~10 s and then fails;
+    Google is always reachable over IPv4, so this is safe everywhere (including Render)."""
+    global _gemini_client
+    if _gemini_client is None:
+        import httpx
+        _gemini_client = httpx.Client(transport=httpx.HTTPTransport(local_address="0.0.0.0"))
+    return _gemini_client
+
+
+def _gemini_post(body):
+    """Send the request to GEMINI_MODEL; if it is overloaded (503), out of free quota (429) or too slow,
+    try the lighter GEMINI_FALLBACK_MODEL before giving up (then the offline bot answers)."""
+    import httpx
+    models = [os.getenv("GEMINI_MODEL", "gemini-3.8-flash"), os.getenv("GEMINI_FALLBACK_MODEL", "gemini-3.5-flash-lite")]
+    headers = {"x-goog-api-key": os.getenv("GEMINI_API_KEY", "").strip()}
+    problem = "no model available"
+    for model in dict.fromkeys(m.strip() for m in models if m.strip()):  # unique, in order
+        for attempt in range(2):  # one retry if the connection drops before Google answers
+            try:
+                r = _gemini_http().post(GEMINI_URL.format(model=model), headers=headers, json=body, timeout=15)
+                break
+            except (httpx.ConnectError, httpx.RemoteProtocolError) as e:
+                problem, r = f"{model}: connection failed ({e})", None
+            except httpx.TimeoutException:
+                problem, r = f"{model}: no answer within 15 seconds", None
+                break
+        if r is None:
+            continue
+        if r.status_code == 200:
+            return r.json()
+        try:
+            detail = r.json()["error"]["message"]
+        except Exception:
+            detail = r.text
+        problem = f"Gemini error {r.status_code} ({model}): {detail[:200]}"
+        if r.status_code not in (429, 500, 503):  # e.g. bad key: a second model won't help
+            break
+    raise RuntimeError(problem)
 
 
 # ---------- offline mock ----------

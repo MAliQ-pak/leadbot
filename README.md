@@ -14,7 +14,7 @@ uvicorn app.main:app --reload
 - Admin panel (the hub for all leads): http://localhost:8000/admin
 - Bot tester with live lead score (rules vs model): http://localhost:8000/chat
 
-**No API key?** It runs in mock mode (rule-based replies) so you can still demo the full flow offline. Add `ANTHROPIC_API_KEY` for real LLM answers.
+**Choose the AI:** set `LLM_PROVIDER` in `.env` to `claude` (Anthropic, paid: add `ANTHROPIC_API_KEY`) or `gemini` (Google, free tier: add `GEMINI_API_KEY` from aistudio.google.com). With no key, or if the API fails, the offline rule-based bot answers so the demo always works. Note: on Gemini's free tier Google may use the content to improve its products, so use demo data only.
 
 ## How it works
 
@@ -40,7 +40,7 @@ uvicorn app.main:app --reload
 
 1. Push this folder to a GitHub repository (`.gitignore` keeps `.env` and `leadbot.db` out).
 2. On [render.com](https://render.com), sign in with GitHub, choose **New > Blueprint**, and pick the repository. Render reads `render.yaml`.
-3. When asked, enter `ANTHROPIC_API_KEY`, `ADMIN_PASSWORD`, and (only if your key is not tied to a workspace) `ANTHROPIC_WORKSPACE_ID`.
+3. When asked, enter `ADMIN_PASSWORD` and the key for your provider: `GEMINI_API_KEY` (with `LLM_PROVIDER=gemini`) or `ANTHROPIC_API_KEY` (with `LLM_PROVIDER=claude`).
 4. Open the `onrender.com` link Render gives you. The admin panel is at `/admin`.
 
 Free-tier notes: the service sleeps after a period of no visits (the first visit then takes about a minute), and its disk is reset on every restart or deploy, so leads, uploads and knowledge-base edits made on the live site are temporary. A paid plan with a persistent disk keeps them.

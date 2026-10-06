@@ -4,7 +4,7 @@ AI lead-qualification chatbot for small businesses. A website chat widget answer
 
 ## Run
     pip install -r requirements.txt
-    cp .env.example .env     # add ANTHROPIC_API_KEY (empty = offline mock mode)
+    cp .env.example .env     # set LLM_PROVIDER + its key (GEMINI_API_KEY or ANTHROPIC_API_KEY); no key = offline mock
     uvicorn app.main:app --reload
 Demo website: http://localhost:8000  |  Admin panel: http://localhost:8000/admin  |  Bot tester: http://localhost:8000/chat
 
@@ -13,7 +13,7 @@ Demo website: http://localhost:8000  |  Admin panel: http://localhost:8000/admin
 - app/rag.py      TF-IDF (char n-grams) retrieval over kb/*.md + Q&A + uploaded docs/web pages (SQLite), with Roman Urdu synonyms.
                   Best score below rag.CONFIDENT (0.3) on a question = bot says not sure + logs it to 'unanswered'
 - app/ingest.py   file (pdf via pypdf, docx via zipfile, txt, md) and URL text extraction + chunking
-- app/llm.py      Claude call (JSON reply + lead fields) and offline rule-based mock
+- app/llm.py      LLM_PROVIDER=claude|gemini (JSON reply + lead fields), offline rule-based mock fallback, 60s cool-down after API errors
 - app/scoring.py  explainable rule-based score 0-100
 - app/classifier.py  logistic-regression lead classifier; main.py blends it with the rules (ML_WEIGHT)
 - train_classifier.py  trains from data/labeled_leads.csv -> models/lead_classifier.joblib (re-run after editing data)

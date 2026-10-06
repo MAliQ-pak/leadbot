@@ -267,7 +267,8 @@ def dismiss_unanswered(item_id: int):
 def health():
     return {
         "ok": True,
-        "mode": "claude" if os.getenv("ANTHROPIC_API_KEY") else "mock",
+        "mode": llm.provider(),  # "claude", "gemini" or "mock" (offline bot)
+        "model": llm.model_name(),
         "business": llm.BUSINESS,
         "classifier": classifier.MODEL_PATH.exists(),
         "ml_weight": float(os.getenv("ML_WEIGHT", "0.5")),

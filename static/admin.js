@@ -179,13 +179,15 @@ async function deleteLead() {
 }
 
 // ---------- bot page (knowledge-base training lives in admin-kb.js) ----------
+const MODE_LABEL = { claude: "Claude AI", gemini: "Gemini AI", mock: "Offline mock" };
 async function loadBot() {
   const h = await api("/api/health").catch(() => null);
   if (h) {
-    $("b-mode").textContent = h.mode === "claude" ? "Claude AI" : "Offline mock";
-    $("b-mode-note").textContent = h.mode === "claude" ? "answers written by Claude from the knowledge base" : "rule-based replies, no internet needed";
+    $("b-mode").textContent = MODE_LABEL[h.mode] || h.mode;
+    $("b-mode-note").textContent = h.mode === "mock" ? "rule-based replies, no internet needed"
+      : `${h.model}, answering from the knowledge base`;
     if (h.llm_error) {
-      $("b-mode").textContent = "Claude AI (failing)";
+      $("b-mode").textContent = (MODE_LABEL[h.mode] || h.mode) + " (failing)";
       $("b-mode-note").textContent = `Last call failed ${ago(h.llm_error.time)}, so the offline bot answered: ${h.llm_error.message}`;
       $("b-mode-note").classList.add("danger-text");
     } else {
@@ -215,7 +217,7 @@ $("d-save-notes").onclick = saveNotes;
 $("d-delete").onclick = deleteLead;
 
 api("/api/health").then(h => {
-  $("mode").textContent = "Bot mode: " + (h.mode === "claude" ? "Claude AI" : "offline mock");
+  $("mode").textContent = "Bot mode: " + (MODE_LABEL[h.mode] || h.mode);
   $("biz").textContent = h.business + " admin";
 }).catch(() => {});
 route();
