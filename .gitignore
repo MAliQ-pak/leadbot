@@ -19,3 +19,6 @@ venv/
 report/*.html
 report/*.tmp.pdf
 report/* (new).pdf
+
+# local notes for the AI coding assistant (not part of the project)
+CLAUDE.md

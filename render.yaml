@@ -31,6 +31,8 @@ services:
         value: admin
       - key: ADMIN_PASSWORD
         sync: false
+      - key: SEED_DEMO
+        value: "true"
       - key: LLM_HOURLY_LIMIT
         value: "200"
       - key: MAX_CLAUDE_MESSAGES_PER_CHAT

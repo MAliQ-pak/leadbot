@@ -337,3 +337,10 @@ def chat_page():
 @app.get("/admin", dependencies=auth.ADMIN)
 def admin():
     return FileResponse(STATIC / "admin.html")
+
+
+# Demo data for presentations: with SEED_DEMO=true an empty database is filled with fictional
+# leads at start-up (Render's free tier starts empty after every restart). See app/seed.py.
+if os.getenv("SEED_DEMO", "false").lower() == "true":
+    from . import seed as _seed
+    _seed.seed_if_empty()

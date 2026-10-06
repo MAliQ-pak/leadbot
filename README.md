@@ -34,6 +34,16 @@ uvicorn app.main:app --reload
      - **Main text**: edit `kb/business.md` directly.
 6. Optional: `crm.py` can also push warm/hot leads to a CRM webhook. It is off by default; set `CRM_ENABLED=true` in `.env` to turn it on.
 
+## Demo data
+
+For presentations, fill the admin panel with fictional BrightPath Solar leads (all six stages, chats in English and Roman Urdu, unanswered questions, Q&A pairs and an audit history):
+
+```bash
+python -m app.seed
+```
+
+This replaces all existing leads. With `SEED_DEMO=true` the server does the same by itself whenever the database is empty, which keeps the live demo filled after Render's free tier restarts. Leave it `false` for a real business.
+
 ## Project report
 
 `report/report.md` is the report text. Build the styled PDF (Fraunces + Inter, the LeadBot palette, figures drawn from the live code) with:

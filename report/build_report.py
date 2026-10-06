@@ -426,5 +426,7 @@ def print_pdf(html_path, out_pdf):
 
 if __name__ == "__main__":
     for source, name, eyebrow, lede, footer, figs in DOCS:
-        pdf = print_pdf(build_html(source, HERE / f"{name}.html", eyebrow, lede, footer, figs), HERE / f"{name}.pdf")
+        page = build_html(source, HERE / f"{name}.html", eyebrow, lede, footer, figs)
+        pdf = print_pdf(page, HERE / f"{name}.pdf")
+        page.unlink(missing_ok=True)  # the HTML is only a step towards the PDF
         print(f"Wrote {pdf} ({pdf.stat().st_size // 1024} KB)")
