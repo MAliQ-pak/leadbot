@@ -34,6 +34,17 @@ uvicorn app.main:app --reload
      - **Main text**: edit `kb/business.md` directly.
 6. Optional: `crm.py` can also push warm/hot leads to a CRM webhook. It is off by default; set `CRM_ENABLED=true` in `.env` to turn it on.
 
+## Project report
+
+`report/report.md` is the report text. Build the styled PDF (Fraunces + Inter, the LeadBot palette, figures drawn from the live code) with:
+
+```bash
+pip install markdown
+python report/build_report.py
+```
+
+Fill in the cover details (roll number, supervisor, department, university) at the top of `report/build_report.py` first. The PDF is written to `report/LeadBot-FYP-Report.pdf`; it is printed by Microsoft Edge or Google Chrome in headless mode.
+
 ## Admin login
 
 `/admin`, the bot tester (`/chat`) and all admin APIs need the owner login set by `ADMIN_USER` / `ADMIN_PASSWORD` (the browser shows its own login box). With no password set, the admin panel only opens on the computer running the server, so a deployment can never be left open by accident.

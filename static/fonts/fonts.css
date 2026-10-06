@@ -1,0 +1,25 @@
+/* Local copies of Fraunces and Inter (SIL Open Font License, see the OFL files here), so every
+   page shows the right fonts with no internet. Variable fonts: one file covers every weight. */
+@font-face {
+  font-family: "Inter";
+  src: url("/static/fonts/Inter-Variable.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Fraunces";
+  src: url("/static/fonts/Fraunces-Variable.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Fraunces";
+  src: url("/static/fonts/Fraunces-Italic-Variable.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+/* Fraunces has a "wonky" axis that swaps in quirky letter shapes (mostly in italics); keep the standard shapes. */
+*, *::before, *::after { font-variation-settings: "WONK" 0 !important; }

@@ -22,6 +22,8 @@ Demo website: http://localhost:8000  |  Admin panel: http://localhost:8000/admin
 - app/db.py       SQLite (leadbot.db); leads have a deal stage (db.STATUSES: new, contacted, site_visit, quote_sent, won, lost) + notes; audit table via db.audit()
 - static/         demo website (index.html, site.css), chat widget (widget.js), bot tester (chat.*), admin panel (admin.html/.css/.js, admin-pipeline.js = deals board + audit log, admin-kb.js = KB training)
 - kb/business.md  sample business (BrightPath Solar); replace with your own
+- static/fonts/   local Fraunces + Inter (OFL) used by every page and the report
+- report/         report.md (source) + build_report.py -> LeadBot-FYP-Report.pdf (figures from live code)
 
 ## Rules for changes
 - Keep it simple: this is a student project that must be demoable and explainable in a viva.
