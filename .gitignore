@@ -22,3 +22,6 @@ report/* (new).pdf
 
 # local notes for the AI coding assistant (not part of the project)
 CLAUDE.md
+
+# local signing key for login sessions (set SECRET_KEY on the host instead)
+.secret_key

@@ -34,6 +34,8 @@ h1 { font-family: var(--font-display); font-weight: 600; letter-spacing: -.01em;
 .side-foot { margin-top: auto; display: flex; flex-direction: column; gap: 10px; padding: 0 8px; font-size: 14px; }
 .side-foot a { color: var(--side-active); text-decoration: none; font-weight: 600; }
 .mode { font-size: 12px; color: var(--faint); }
+.logout { align-self: flex-start; background: none; border: 1px solid #3a3934; color: var(--side-text); border-radius: 8px; padding: 5px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+.logout:hover { border-color: var(--side-active); color: #fff; }
 
 /* main */
 main { flex: 1; min-width: 0; padding: 26px 30px 40px; }

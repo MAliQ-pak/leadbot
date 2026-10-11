@@ -16,7 +16,8 @@ WEIGHTS = {
 }
 
 
-def score_lead(lead, user_text):
+def score_lead(lead, user_text, extra_intent=()):
+    """extra_intent: the business's own buying-signal words (e.g. "size", "cod" for a shoe shop)."""
     text = (user_text or "").lower()
     pts, reasons = 0, []
 
@@ -25,7 +26,7 @@ def score_lead(lead, user_text):
             pts += w
             reasons.append(f"shared {field}")
 
-    if any(re.search(rf"\b{re.escape(w)}\b", text) for w in INTENT_WORDS):
+    if any(re.search(rf"\b{re.escape(w)}\b", text) for w in [*INTENT_WORDS, *extra_intent]):
         pts += 10
         reasons.append("asked about pricing/purchase")
 

@@ -1,23 +1,27 @@
-"""Demo data for presentations: fictional BrightPath Solar leads, chats, Q&A pairs, unanswered
-questions and audit history, spread over the last ten days.
+"""Demo data for presentations: two fictional businesses, BrightPath Solar and Stride Shoes, each with
+an owner account, leads at every pipeline stage, chats in English and Roman Urdu, Q&A pairs,
+unanswered questions and an audit history spread over the last ten days.
 
-    python -m app.seed            # replace everything with fresh demo data
-    SEED_DEMO=true (in .env)      # the server seeds by itself whenever the database has no leads,
+    python -m app.seed            # replace EVERYTHING (all businesses and accounts) with fresh demo data
+    SEED_DEMO=true (in .env)      # the server seeds by itself whenever the database has no accounts,
                                   # e.g. after every restart on Render's free tier
 
-Scores are not typed in: every lead is scored by the real rules and classifier (main.score_and_tier).
-All names and phone numbers are made up.
+Demo logins: owner@brightpath.demo and owner@stride.demo. The password is DEMO_PASSWORD; on a laptop
+with no DEMO_PASSWORD set it is "leadbot-demo". Scores are not typed in: every lead is scored by the
+real rules and classifier (main.score_and_tier). All names and phone numbers are made up.
 """
+import os
+import secrets
 import time
 
-from . import db
+from . import auth, business, db
 
 DAY, HOUR, MIN = 86400, 3600, 60
 STAGE_PATH = ["new", "contacted", "site_visit", "quote_sent"]  # the usual road before won or lost
 
 # (session id, name, phone, email, need, budget, timeline, stage, notes, first seen (days ago), chat)
 # chat = visitor and bot turns, alternating, starting with the visitor
-LEADS = [
+SOLAR_LEADS = [
     ("demo-hassan", "Hassan Raza", "0345-1234567", None, "10 kW hybrid with battery", "20 lac", "this month", "new", "",
      0.1, ["How much is a 10kw hybrid system?",
            "A 10 kW hybrid system with battery backup starts from about Rs 1,900,000. Final price depends on roof size, panel brand and battery choice. May I know your name?",
@@ -105,7 +109,7 @@ LEADS = [
 ]
 
 # visitors who never shared contact details (hidden on the Pipeline board unless switched on)
-ANONYMOUS = [
+SOLAR_ANONYMOUS = [
     ("demo-anon-1", 0.2, ["what is the warranty on panels?",
                           "Solar panels come with a 12 year product warranty and a 25 year performance warranty. What are you looking for?"]),
     ("demo-anon-2", 1.5, ["do you sell generators?",
@@ -115,7 +119,7 @@ ANONYMOUS = [
 ]
 
 # questions waiting under Admin > Bot & knowledge > Unanswered: (question, times asked, first asked days ago)
-UNANSWERED = [
+SOLAR_UNANSWERED = [
     ("is there a discount for students?", 3, 6.0),
     ("do you sell generators?", 2, 1.5),
     ("what brand of inverter do you use?", 1, 2.3),
@@ -123,7 +127,7 @@ UNANSWERED = [
 ]
 
 # Q&A pairs the owner has already added (answers only restate kb/business.md)
-FAQS = [
+SOLAR_FAQS = [
     ("Can I book a site visit on Sunday?", "sunday ko visit ho sakta hai?",
      "Our team works Monday to Saturday, 9 am to 7 pm, so site visits are booked on those days.", "unanswered", 5.0),
     ("Do you install on commercial buildings?", "factory ke liye solar?\nshop ke liye solar lagate ho?",
@@ -132,43 +136,129 @@ FAQS = [
 ]
 
 
+# ---------- Stride Shoes ----------
+SHOE_LEADS = [
+    ("demo-saad", "Saad Ahmed", "0300-4561237", None, "sneakers", "6000", "by Friday", "new", "",
+     0.2, ["do you have sneakers in size 43?",
+           "Adult sizes run from EU 36 to EU 46, and sneakers start from Rs 4,500. May I have your name?",
+           "Saad Ahmed, 0300-4561237. budget 6000, need them by Friday",
+           "Thanks, Saad! Delivery takes 3 to 5 working days. Our team will confirm stock and get back to you shortly."]),
+    ("demo-mahnoor", "Mahnoor Tariq", "0321-7894561", None, "khussa", "5000", "next month", "new", "",
+     0.9, ["khussa ki qeemat kya hai? shaadi ke liye chahiye",
+           "Khussa Rs 2,500 se shuru hote hain. Kya main aap ka naam jaan sakti hoon?",
+           "Mahnoor Tariq, 0321-7894561. budget 5000, agle mahine shaadi hai",
+           "Shukriya Mahnoor! Hamari team aap se jald rabta karegi."]),
+    ("demo-danish", "Danish Iqbal", "0333-1478523", "danish.iqbal@example.com", "formal shoes size 42", "8000", "this week",
+     "contacted", "Sent photos of two black formal pairs on WhatsApp.",
+     2.1, ["I need formal shoes in size 42 for an interview this week",
+           "Formal shoes start from Rs 6,000, and we deliver in 3 to 5 working days. May I have your name?",
+           "Danish Iqbal, 0333-1478523, danish.iqbal@example.com. budget around 8000",
+           "Thanks, Danish! Our team will get back to you shortly."]),
+    ("demo-waqar", "Coach Waqar", "0301-2583691", "waqar.sports@example.com", "school shoes, 25 pairs", "60000", "2 weeks",
+     "site_visit", "Bulk order for a football academy. Sizes list received; order confirmed.",
+     4.0, ["we need 25 pairs of sports shoes for our football academy, do you do bulk orders?",
+           "Yes. Schools and companies ordering 20 or more pairs can ask for a bulk quote. May I have your name?",
+           "Coach Waqar, 0301-2583691, waqar.sports@example.com. budget 60000, within 2 weeks",
+           "Thanks, Coach Waqar! A team member will call to confirm sizes and prices."]),
+    ("demo-areeba", "Areeba Shah", "0312-9637412", None, "kids shoes size 30 and 32", "4500", "this week", "site_visit",
+     "Two pairs of kids' school shoes, cash on delivery.",
+     3.2, ["kids school shoes size 30 aur 32 chahiye, COD hai?",
+           "Ji, cash on delivery available hai. Kids' shoes Rs 2,000 se shuru hote hain. Aap ka naam?",
+           "Areeba Shah, 0312-9637412. budget 4500, is hafte",
+           "Shukriya Areeba! Hamari team order confirm karegi."]),
+    ("demo-faisal", "Faisal Mehmood", "0345-3216549", None, "joggers size 44", "7000", "this week", "quote_sent",
+     "Shipped with courier, tracking sent by SMS.",
+     5.0, ["joggers in size 44? how much is delivery to Multan?",
+           "Joggers start from Rs 4,500. Delivery is free on orders above Rs 5,000, otherwise Rs 250. May I have your name?",
+           "Faisal Mehmood, 0345-3216549. budget 7000, this week",
+           "Thanks, Faisal! Our team will get back to you shortly."]),
+    ("demo-nida", "Nida Hassan", "0322-7418529", "nida.hassan@example.com", "heels size 38", "6500", "this week", "won",
+     "Delivered and paid. Asked about the return policy for a second pair.",
+     7.5, ["do you have heels in size 38? what's the return policy?",
+           "Unworn shoes can be returned or exchanged within 7 days of delivery with the receipt. May I have your name?",
+           "Nida Hassan, 0322-7418529, nida.hassan@example.com. budget 6500, this week",
+           "Thanks, Nida! Our team will get back to you shortly."]),
+    ("demo-hamid", "Hamid Raza", "0311-9517534", None, "sneakers", "3000", None, "lost",
+     "Wanted sneakers under Rs 3,000; our range starts higher.",
+     6.0, ["cheapest sneakers you have?",
+           "Sneakers and joggers start from Rs 4,500. May I have your name?",
+           "Hamid Raza, 0311-9517534. my budget is only 3000",
+           "Thanks, Hamid! Our team will let you know about any sales."]),
+]
+
+SHOE_ANONYMOUS = [
+    ("demo-shoe-anon-1", 0.5, ["what is your return policy?",
+                               "Unworn shoes can be returned or exchanged within 7 days of delivery with the receipt."]),
+    ("demo-shoe-anon-2", 1.8, ["do you have size 47?",
+                               "I'm not sure about that one, but our team can help. Which shoes are you looking for?"]),
+]
+
+SHOE_UNANSWERED = [
+    ("do you have size 47?", 2, 1.8),
+    ("can I pick up my order from the store?", 1, 3.0),
+    ("do you sell socks?", 1, 2.2),
+]
+
+SHOE_FAQS = [
+    ("Do you deliver to Gilgit and Skardu?", "gilgit delivery?\nskardu mein delivery hoti hai?",
+     "Yes, we deliver across Pakistan, including Gilgit-Baltistan. Remote areas can take a few extra days.", "unanswered", 4.0),
+]
+
+DEMO = [  # (slug, business name, template, owner email, owner name, data)
+    ("brightpath-solar", "BrightPath Solar", "solar", "owner@brightpath.demo", "BrightPath Owner",
+     (SOLAR_LEADS, SOLAR_ANONYMOUS, SOLAR_UNANSWERED, SOLAR_FAQS)),
+    ("stride-shoes", "Stride Shoes", "shoes", "owner@stride.demo", "Stride Owner",
+     (SHOE_LEADS, SHOE_ANONYMOUS, SHOE_UNANSWERED, SHOE_FAQS)),
+]
+
+
+def demo_password():
+    """DEMO_PASSWORD if set; on a laptop "leadbot-demo"; on a server with none set, a random one (printed)."""
+    if os.getenv("DEMO_PASSWORD"):
+        return os.getenv("DEMO_PASSWORD")
+    if os.getenv("RENDER"):  # Render sets this: never leave a guessable password on the internet
+        pw = secrets.token_urlsafe(9)
+        print(f"Demo accounts: DEMO_PASSWORD is not set, using a random password for this start-up: {pw}")
+        return pw
+    return "leadbot-demo"
+
+
 def _stage_route(stage):
-    """The stages a deal passed through to reach `stage` (won and lost come after a quote or a visit)."""
+    """The stages a deal passed through to reach `stage` (won and lost come after the third and fourth)."""
     if stage in STAGE_PATH:
         return STAGE_PATH[1:STAGE_PATH.index(stage) + 1]
     return ["contacted", "site_visit", "quote_sent", stage] if stage == "won" else ["contacted", stage]
 
 
 def reset():
-    for table in ("messages", "leads", "audit", "kb_faq", "unanswered"):
+    for table in ("messages", "leads", "audit", "kb_faq", "kb_docs", "unanswered", "users", "businesses"):
         db.execute(f"DELETE FROM {table}")
 
 
-def seed():
+def _seed_business(bid, owner_email, data):
     from .main import score_and_tier  # imported here: main imports this module at start-up
     from .scoring import tier_for
+    leads, anonymous, unanswered, faqs = data
+    settings = business.settings(db.get_business(bid))
+    names = settings["stage_names"]
     now = time.time()
     audit = []  # (time, actor, kind, action, target, detail)
 
     def add_chat(sid, start, turns):
         t = start
         for i, text in enumerate(turns):
-            db.execute("INSERT INTO messages(session_id, role, content, created) VALUES (?,?,?,?)",
-                       (sid, "user" if i % 2 == 0 else "assistant", text, t))
+            db.add_message(bid, sid, "user" if i % 2 == 0 else "assistant", text, created=t)
             t += 40 if i % 2 == 0 else 2 * MIN
         return t
 
-    for sid, name, phone, email, need, budget, timeline, stage, notes, days, turns in LEADS:
+    for sid, name, phone, email, need, budget, timeline, stage, notes, days, turns in leads:
         start = now - days * DAY
         last = add_chat(sid, start, turns)
-        lead = {"session_id": sid, "name": name, "phone": phone, "email": email, "need": need,
-                "budget": budget, "timeline": timeline}
-        score_and_tier(lead, " ".join(turns[0::2]))
-        db.execute(
-            """INSERT INTO leads(session_id, name, phone, email, need, budget, timeline, score, rule_score, ml_score,
-               tier, reason, synced_at, updated, status, notes, created) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-            (sid, name, phone, email, need, budget, timeline, lead["score"], lead["rule_score"], lead["ml_score"],
-             lead["tier"], lead["reason"], None, last, stage, notes, start))
+        lead = {"session_id": sid, "business_id": bid, "name": name, "phone": phone, "email": email, "need": need,
+                "budget": budget, "timeline": timeline, "status": stage, "notes": notes, "created": start,
+                "updated_override": last}
+        score_and_tier(lead, " ".join(turns[0::2]), settings)
+        db.save_lead(lead)
         audit.append((start, "visitor", "lead", "New lead", sid, f"first message: {turns[0][:80]}"))
         if lead["tier"] == "hot":
             audit.append((start + 3 * MIN, "system", "lead", "Lead turned hot", sid, f"{name} scored {lead['score']}"))
@@ -176,58 +266,70 @@ def seed():
         prev, t = "new", last + 2 * HOUR
         for nxt in _stage_route(stage):
             t = min(t + 0.9 * DAY * max(days, 1) / 4, now - 10 * MIN)
-            names = db.STATUS_NAMES
-            audit.append((t, "admin", "lead", "Stage changed", sid, f"{name}: {names[prev]} → {names[nxt]}"))
+            audit.append((t, owner_email, "lead", "Stage changed", sid, f"{name}: {names[prev]} → {names[nxt]}"))
             prev = nxt
         if notes:
-            audit.append((min(t + 20 * MIN, now - 5 * MIN), "admin", "lead", "Notes edited", sid, name))
+            audit.append((min(t + 20 * MIN, now - 5 * MIN), owner_email, "lead", "Notes edited", sid, name))
 
-    for sid, days, turns in ANONYMOUS:
+    for sid, days, turns in anonymous:
         start = now - days * DAY
         last = add_chat(sid, start, turns)
-        lead = {"session_id": sid}
-        score_and_tier(lead, turns[0])
-        db.execute("""INSERT INTO leads(session_id, score, rule_score, ml_score, tier, reason, updated, status, notes, created)
-                      VALUES (?,?,?,?,?,?,?,?,?,?)""",
-                   (sid, lead["score"], lead["rule_score"], lead["ml_score"], tier_for(lead["score"]), lead["reason"],
-                    last, "new", "", start))
+        lead = {"session_id": sid, "business_id": bid, "created": start, "updated_override": last}
+        score_and_tier(lead, turns[0], settings)
+        lead["tier"] = tier_for(lead["score"])
+        db.save_lead(lead)
         audit.append((start, "visitor", "lead", "New lead", sid, f"first message: {turns[0][:80]}"))
 
-    for question, times, days in UNANSWERED:
+    for question, times, days in unanswered:
         for n in range(times):
-            db.execute("INSERT INTO unanswered(session_id, question, score, created, status) VALUES (?,?,?,?,?)",
-                       (f"demo-q-{n}", question, 0.12, now - (days - n * 0.7) * DAY, "open"))
+            db.add_unanswered(bid, f"demo-q-{bid}-{n}", question, 0.12, created=now - (days - n * 0.7) * DAY)
 
-    for question, variants, answer, source, days in FAQS:
+    for question, variants, answer, source, days in faqs:
         t = now - days * DAY
-        db.execute("INSERT INTO kb_faq(question, variants, answer, source, created) VALUES (?,?,?,?,?)",
-                   (question, variants, answer, source, t))
-        audit.append((t, "admin", "kb", "Answered a visitor question" if source == "unanswered" else "Q&A added", "", question))
+        db.execute("INSERT INTO kb_faq(business_id, question, variants, answer, source, created) VALUES (?,?,?,?,?,?)",
+                   (bid, question, variants, answer, source, t))
+        audit.append((t, owner_email, "kb", "Answered a visitor question" if source == "unanswered" else "Q&A added", "", question))
 
     # owner logins, one failed attempt, and one AI outage handled by the offline bot
+    audit.append((now - 10 * DAY, owner_email, "auth", "Account created", "", "demo account"))
     for d in (9.6, 7.1, 5.0, 3.0, 1.1, 0.05):
-        audit.append((now - d * DAY, "admin", "auth", "Logged in", "", "from 39.57.120.14"))
-    audit.append((now - 4.2 * DAY, "unknown", "auth", "Failed login", "", "username 'admin' from 182.180.66.7"))
+        audit.append((now - d * DAY, owner_email, "auth", "Logged in", "", "from 39.57.120.14"))
+    audit.append((now - 4.2 * DAY, "unknown", "auth", "Failed login", "", "from 182.180.66.7"))
     audit.append((now - 2.05 * DAY, "system", "system", "AI failed, offline bot answered",
                   "", "Gemini error 503 (gemini-3.8-flash): This model is currently experiencing high demand."))
 
     for t, actor, kind, action, target, detail in sorted(audit):
-        db.execute("INSERT INTO audit(created, actor, kind, action, target, detail) VALUES (?,?,?,?,?,?)",
-                   (t, actor, kind, action, target, detail))
+        db.execute("INSERT INTO audit(business_id, created, actor, kind, action, target, detail) VALUES (?,?,?,?,?,?,?)",
+                   (bid, t, actor, kind, action, target, detail))
+    return len(leads) + len(anonymous)
+
+
+def seed():
     from . import rag
-    rag.reload_kb()  # the new Q&A pairs are answerable straight away
-    return len(LEADS), len(ANONYMOUS)
+    password = demo_password()
+    total = 0
+    for slug, name, industry, email, owner, data in DEMO:
+        biz = db.business_by_slug(slug)
+        bid = biz["id"] if biz else business.create_from_template(name, industry, "", setup_done=1, slug=slug)
+        db.update_business(bid, setup_done=1)
+        if not db.user_by_email(email):
+            db.create_user(email, auth.hash_password(password), owner, bid)
+        total += _seed_business(bid, email, data)
+        rag.reload_kb(bid)  # the new Q&A pairs are answerable straight away
+    return total
 
 
 def seed_if_empty():
-    """Called at server start when SEED_DEMO=true: fill an empty database with demo data."""
-    if not db.rows("SELECT 1 FROM leads LIMIT 1"):
-        n, a = seed()
-        print(f"Demo data: {n} leads and {a} anonymous visitors added (SEED_DEMO=true).")
+    """Called at server start when SEED_DEMO=true: fill a database that has no accounts with demo data."""
+    if not db.rows("SELECT 1 AS x FROM users LIMIT 1"):
+        n = seed()
+        print(f"Demo data: 2 businesses with {n} leads added (SEED_DEMO=true).")
 
 
 if __name__ == "__main__":
     from . import main  # noqa: F401  loads .env and creates the tables
     reset()
-    n, a = seed()
-    print(f"Demo data ready: {n} leads, {a} anonymous visitors, {len(UNANSWERED)} unanswered questions, {len(FAQS)} Q&A pairs.")
+    business.bootstrap()
+    n = seed()
+    print(f"Demo data ready: 2 businesses, {n} leads. Log in as owner@brightpath.demo or owner@stride.demo "
+          f"(password: {demo_password() if os.getenv('DEMO_PASSWORD') or not os.getenv('RENDER') else 'see DEMO_PASSWORD'}).")

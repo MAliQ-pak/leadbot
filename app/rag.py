@@ -4,7 +4,6 @@ Character n-grams are used on purpose: they tolerate Roman Urdu spelling variati
 (e.g. "qeemat" / "keemat") better than word-level matching, and need no embedding API.
 """
 import re
-import sqlite3
 from pathlib import Path
 
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -72,6 +71,26 @@ SYNONYMS = {
     "company": "about",
     "who are you": "about",
     "batao": "price pricing",
+    # general shop words (a shoe store, clothing, retail)
+    "delivery": "delivery",
+    "shipping": "delivery",
+    "deliver": "delivery",
+    "cod": "delivery payment cash",
+    "cash on delivery": "delivery payment",
+    "return": "returns exchange",
+    "returns": "returns exchange",
+    "exchange": "returns exchange",
+    "refund": "returns exchange",
+    "size": "sizes",
+    "sizes": "sizes",
+    "joota": "products shoes",
+    "joote": "products shoes",
+    "shoes": "products",
+    "jazzcash": "payment",
+    "easypaisa": "payment",
+    "card": "payment",
+    "pay": "payment",
+    "bulk": "bulk orders",
 }
 
 
@@ -88,10 +107,11 @@ def _keywords(text):
 
 
 class KnowledgeBase:
-    """All knowledge sources, indexed together:
-    kb/*.md (main text), Q&A pairs, and uploaded documents / imported web pages (both in SQLite)."""
+    """One business's knowledge, indexed together: its main text, its Q&A pairs, and its uploaded
+    documents / imported web pages (all stored in the database under its business_id)."""
 
-    def __init__(self):
+    def __init__(self, business_id):
+        self.business_id = business_id
         self.chunks = []
         self._load()
         self.vec = TfidfVectorizer(analyzer="char_wb", ngram_range=(3, 5), lowercase=True)
@@ -106,31 +126,28 @@ class KnowledgeBase:
         })
 
     def _load(self):
-        for f in sorted(KB_DIR.glob("*.md")):
-            section, body = "", []
-            for line in f.read_text(encoding="utf-8").splitlines():
-                if line.startswith("# "):
-                    continue  # document title
-                if line.startswith("## "):
-                    if body:
-                        self._add(section, " ".join(body), "text")
-                    section, body = line[3:].strip(), []
-                elif line.strip():
-                    body.append(line.strip())
-            if body:
-                self._add(section, " ".join(body), "text")
-
         from . import db, ingest  # imported here to avoid a circular import at startup
-        try:
-            for q in db.faqs():
-                variants = " ".join(v.strip() for v in (q["variants"] or "").splitlines() if v.strip())
-                self._add(q["question"], q["answer"], "qa", index_extra=variants,
-                          keywords_from=q["question"] + " " + variants)
-            for d in db.docs(with_text=True):
-                for section, body in ingest.chunk(d["name"], d["text"]):
-                    self._add(section, body, d["kind"])
-        except sqlite3.OperationalError:
-            pass  # tables not created yet (db.init() runs when the app starts)
+        biz = db.get_business(self.business_id) or {}
+        section, body = "", []
+        for line in (biz.get("kb_text") or "").splitlines():  # the main text: each "## " heading is one topic
+            if line.startswith("# "):
+                continue  # document title
+            if line.startswith("## "):
+                if body:
+                    self._add(section, " ".join(body), "text")
+                section, body = line[3:].strip(), []
+            elif line.strip():
+                body.append(line.strip())
+        if body:
+            self._add(section, " ".join(body), "text")
+
+        for q in db.faqs(self.business_id):
+            variants = " ".join(v.strip() for v in (q["variants"] or "").splitlines() if v.strip())
+            self._add(q["question"], q["answer"], "qa", index_extra=variants,
+                      keywords_from=q["question"] + " " + variants)
+        for d in db.docs(self.business_id, with_text=True):
+            for section, body in ingest.chunk(d["name"], d["text"]):
+                self._add(section, body, d["kind"])
 
     def _expand(self, query):
         q = query.lower()
@@ -156,18 +173,16 @@ class KnowledgeBase:
         return [c["text"] for c in self.search_scored(query, k) if c["score"] >= min_score]
 
 
-_kb = None
+_kbs = {}  # business_id -> its KnowledgeBase, built on first use
 
 
-def get_kb():
-    global _kb
-    if _kb is None:
-        _kb = KnowledgeBase()
-    return _kb
+def get_kb(business_id):
+    if business_id not in _kbs:
+        _kbs[business_id] = KnowledgeBase(business_id)
+    return _kbs[business_id]
 
 
-def reload_kb():
-    """Rebuild the index after the knowledge base is changed in the admin panel."""
-    global _kb
-    _kb = KnowledgeBase()
-    return _kb
+def reload_kb(business_id):
+    """Rebuild one business's index after its knowledge base changes in the admin panel."""
+    _kbs[business_id] = KnowledgeBase(business_id)
+    return _kbs[business_id]

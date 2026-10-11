@@ -21,15 +21,18 @@ services:
         value: gemini-3.5-flash-lite,gemini-flash-lite-latest
       - key: MODEL
         value: claude-sonnet-5-5
-      - key: BUSINESS_NAME
-        value: BrightPath Solar
       - key: ANTHROPIC_API_KEY
         sync: false
       - key: ANTHROPIC_WORKSPACE_ID
         sync: false
-      - key: ADMIN_USER
-        value: admin
-      - key: ADMIN_PASSWORD
+      # Free PostgreSQL (e.g. Neon) connection string, so sign-ups and leads survive restarts
+      - key: DATABASE_URL
+        sync: false
+      # Signs the login cookie; Render generates a random one
+      - key: SECRET_KEY
+        generateValue: true
+      # Password of the two demo owner accounts (owner@brightpath.demo, owner@stride.demo)
+      - key: DEMO_PASSWORD
         sync: false
       - key: SEED_DEMO
         value: "true"

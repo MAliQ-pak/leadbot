@@ -11,7 +11,7 @@
   <aside class="side">
     <div class="brand">
       <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="7" fill="#9FBE9A"/><g stroke="#9FBE9A" stroke-width="2.5" stroke-linecap="round"><path d="M16 2v4M16 26v4M2 16h4M26 16h4M6 6l2.8 2.8M23.2 23.2 26 26M6 26l2.8-2.8M23.2 8.8 26 6"/></g></svg>
-      <div>LeadBot<small id="biz">Admin panel</small></div>
+      <div>LeadBot<small id="biz">Your business</small></div>
     </div>
     <nav>
       <a href="#overview" data-page="overview">Overview</a>
@@ -19,10 +19,13 @@
       <a href="#leads" data-page="leads">Leads <span id="nav-count" class="count">0</span></a>
       <a href="#audit" data-page="audit">Audit log</a>
       <a href="#bot" data-page="bot">Bot &amp; knowledge <span id="nav-un" class="count alert" title="Unanswered questions" hidden>0</span></a>
+      <a href="/app/setup">Setup &amp; install</a>
     </nav>
     <div class="side-foot">
-      <a href="/" target="_blank">View website &#8599;</a>
+      <a id="site-link" href="/" target="_blank">View website &#8599;</a>
       <span id="mode" class="mode"></span>
+      <span id="user" class="mode"></span>
+      <button id="logout" class="logout" type="button">Log out</button>
     </div>
   </aside>
 
@@ -105,7 +108,7 @@
       <div class="box">
         <div class="box-head">
           <h2>Test the knowledge</h2>
-          <a class="btn ghost" href="/chat" target="_blank">Open bot tester &#8599;</a>
+          <a class="btn ghost" href="/app/setup">Live preview &amp; setup &#8599;</a>
         </div>
         <form id="kt-form" class="inline-form">
           <input id="kt-q" placeholder="Ask a test question, e.g. do you sell generators?" maxlength="500">

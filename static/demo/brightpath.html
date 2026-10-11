@@ -165,11 +165,12 @@
   <footer class="foot">
     <div class="wrap foot-in">
       <span>&copy; BrightPath Solar &middot; Karachi &middot; Lahore &middot; Islamabad</span>
-      <span>BrightPath Solar is a fictional business used to demo LeadBot (FYP). <a href="/admin">Admin panel</a></span>
+      <span>BrightPath Solar is a fictional business used to demo <a href="/">LeadBot</a> (FYP). <a href="/login">Owner login</a></span>
     </div>
   </footer>
 
-  <script src="/static/widget.js" data-title="BrightPath Assistant" defer></script>
+  <!-- The LeadBot embed code, exactly as the owner copies it from Setup & install -->
+  <script src="/static/widget.js" data-bot="brightpath-solar" data-color="#3E5C3F" data-teaser="Hi! Want a solar quote? Ask me anything." defer></script>
   <script>
     // Any button with data-chat opens the chatbot (and sends its text, if it has one)
     document.querySelectorAll("[data-chat]").forEach(b => b.addEventListener("click", () => {

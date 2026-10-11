@@ -1,103 +1,118 @@
 # LeadBot: AI Lead Qualification Chatbot (FYP)
 
-Website chat widget that answers customer questions from a business knowledge base, collects lead details in conversation, scores each lead (hot / warm / cold, with a reason), and pushes qualified leads to a CRM webhook. Includes an owner dashboard.
+A chatbot product for small businesses. A business signs up, picks an industry template (solar installer, shoe store, or start from scratch), teaches the bot its own prices and policies, tests it in a live preview, and pastes one line of code on its website. The bot answers customers only from that business's knowledge, collects their details, scores each lead (hot / warm / cold, with a reason) and puts it on the business's own pipeline.
 
 ## Run it
 
 ```bash
 pip install -r requirements.txt
-cp .env.example .env        # add ANTHROPIC_API_KEY (optional, see below)
+cp .env.example .env        # set LLM_PROVIDER and its key (optional, see below)
+python -m app.seed          # optional: two demo businesses with leads
 uvicorn app.main:app --reload
 ```
 
-- Demo website (BrightPath Solar) with the chatbot: http://localhost:8000
-- Admin panel (the hub for all leads): http://localhost:8000/admin
-- Bot tester with live lead score (rules vs model): http://localhost:8000/chat
+| Page | Address |
+|---|---|
+| Product home page | http://localhost:8000 |
+| Sign up / log in | http://localhost:8000/signup, http://localhost:8000/login |
+| Owner dashboard | http://localhost:8000/app |
+| Setup wizard with live preview | http://localhost:8000/app/setup |
+| Demo websites with the bot embedded | http://localhost:8000/demo/brightpath-solar, http://localhost:8000/demo/stride-shoes |
+| One business's chat window | http://localhost:8000/bot/stride-shoes |
 
-**Choose the AI:** set `LLM_PROVIDER` in `.env` to `claude` (Anthropic, paid: add `ANTHROPIC_API_KEY`) or `gemini` (Google, free tier: add `GEMINI_API_KEY` from aistudio.google.com). With no key, or if the API fails, the offline rule-based bot answers so the demo always works. Note: on Gemini's free tier Google may use the content to improve its products, so use demo data only.
+Demo logins (after `python -m app.seed`): `owner@brightpath.demo` and `owner@stride.demo`, password `leadbot-demo` on a laptop (or `DEMO_PASSWORD` if set).
+
+**Choose the AI:** set `LLM_PROVIDER` in `.env` to `gemini` (Google, free tier: add `GEMINI_API_KEY` from aistudio.google.com) or `claude` (Anthropic, paid: add `ANTHROPIC_API_KEY`). With no key, or if the API fails, the offline rule-based bot answers so the demo always works. On Gemini's free tier Google may use the content to improve its products, so use demo data only.
+
+## Setting up a bot for a new business (e.g. a shoe shop)
+
+1. **Sign up** at `/signup` with the business name and the closest template. The template gives a working bot straight away: a starting knowledge base (with the business's own name), quick-reply buttons, the questions it asks customers, buying-signal words, and pipeline stage names for that industry (a shoe shop gets *Order confirmed* and *Out for delivery* instead of *Site visit booked* and *Quote sent*).
+2. **Setup wizard** (`/app/setup`), with the bot running live beside it:
+   1. Business name, website and template.
+   2. Teach the bot: edit the main text (each `##` heading is one topic), import a web page by URL, or upload a PDF, Word, TXT or Markdown file.
+   3. Bot name, greeting, brand colour and quick replies.
+   4. Lead questions, product words, buying signals and pipeline stage names.
+   5. Install: copy the embed code.
+3. **Test in the live preview.** Preview chats are marked as tests and never appear as leads; *Clear test chats* deletes them.
+4. **Paste the code** on the website, just before `</body>`:
+
+```html
+<script src="https://YOUR-HOST/static/widget.js" data-bot="your-business" data-color="#2E3A6E" defer></script>
+```
+
+The loader draws a chat bubble and opens `/bot/your-business` in an iframe. The iframe is served by LeadBot itself, so it works on any website without CORS set-up and the site's own styles cannot break it. An iframe-only snippet and a direct link (for WhatsApp or social media) are given too. Buttons on the site can open the bot with a question: `LeadBot.open("Do you have size 44?")`.
 
 ## How it works
 
-1. Visitor message goes to `POST /api/chat`.
-2. `rag.py` retrieves the most relevant knowledge-base chunks (TF-IDF over character n-grams, tolerant of Roman Urdu spellings).
-3. `llm.py` asks the LLM to answer only from that context and return the reply plus any lead details stated so far (JSON).
-4. `scoring.py` computes an explainable 0-100 rule score; `classifier.py` (logistic regression, trained by `train_classifier.py` on `data/labeled_leads.csv`) predicts how likely the lead is qualified. The final score is a blend of both (`ML_WEIGHT`, default 0.5) and sets the hot/warm/cold tier. With no trained model it uses rules only.
-5. Every chat becomes a lead in the **admin panel** (`/admin`):
-   - **Overview**: totals for hot / warm / cold / won / lost, hot leads to call now, pipeline, latest conversations.
-   - **Pipeline**: a deals board with one column per stage (New, Contacted, Site visit booked, Quote sent, Won, Lost). Each card shows the lead's hot / warm / cold tag and score; drag a card to move the deal. Visitors without a phone or email are hidden unless switched on.
-   - **Leads**: filter by Hot, Warm, Cold, Won, Lost, or search; open a lead to see contact details, the score breakdown and reason, the full conversation, set its stage, add notes, or delete it.
-   - **Audit log**: every owner action (stage changes, notes, deletes, knowledge-base edits, uploads, logins and failed logins) and key events (new lead, lead turned hot, AI failed), filterable by type.
-   - **Bot & knowledge**: bot mode, scoring mode, a **Test the knowledge** box (shows which topics a question matches and how confidently), and four ways to train the knowledge base. Every change applies on the next message:
-     - **Q&A**: question + other ways to ask it (e.g. Roman Urdu) + answer.
-     - **Unanswered**: questions visitors asked that the knowledge base could not answer confidently (best match below 30%). The bot says it is not sure instead of guessing; the owner answers once and the bot knows it from then on.
-     - **Documents & websites**: upload PDF, Word (.docx), TXT or Markdown files, or import a web page by URL. Text is split into topics by headings / paragraphs.
-     - **Main text**: edit `kb/business.md` directly.
-6. Optional: `crm.py` can also push warm/hot leads to a CRM webhook. It is off by default; set `CRM_ENABLED=true` in `.env` to turn it on.
+1. A visitor's message goes to `POST /api/chat` with the business's slug.
+2. `rag.py` retrieves the most relevant chunks from **that business's** knowledge base (TF-IDF over character n-grams, tolerant of Roman Urdu spellings). Each business has its own cached index.
+3. `llm.py` asks the LLM to answer only from that context, as that business's assistant, and to return the reply plus any lead details stated so far (JSON). The offline bot uses the business's own questions and product words.
+4. `scoring.py` computes an explainable 0-100 rule score (with the business's buying-signal words); `classifier.py` (logistic regression, trained by `train_classifier.py` on `data/labeled_leads.csv`) predicts how likely the lead is qualified. The final score blends both (`ML_WEIGHT`, default 0.5).
+5. The lead appears in that owner's **dashboard** (`/app`):
+   - **Overview**: hot / warm / cold / won / lost totals, hot leads to call now, latest conversations.
+   - **Pipeline**: a deals board with one column per stage; drag a card to move the deal.
+   - **Leads**: filter or search; open a lead for contact details, score breakdown, the full chat, stage and notes.
+   - **Audit log**: every owner action and key event (new lead, lead turned hot, AI failed, logins).
+   - **Bot & knowledge**: Q&A pairs, unanswered questions (best match below 30%, so the bot said it was not sure), documents and web pages, the main text, and a knowledge test box.
+6. Optional: `crm.py` pushes warm/hot leads to a CRM webhook when `CRM_ENABLED=true`.
+
+## Accounts and data separation
+
+- Every table carries a `business_id`; every owner API reads the business from the logged-in session, never from the request, so one business can never see another's leads, chats or knowledge.
+- Passwords are stored as PBKDF2-SHA256 hashes. Login uses a signed, HttpOnly session cookie (`SECRET_KEY`). Five failed logins in 15 minutes from one address are blocked for a while.
+- Data is in SQLite (`leadbot.db`) on a laptop, or PostgreSQL when `DATABASE_URL` is set.
 
 ## Demo data
-
-For presentations, fill the admin panel with fictional BrightPath Solar leads (all six stages, chats in English and Roman Urdu, unanswered questions, Q&A pairs and an audit history):
 
 ```bash
 python -m app.seed
 ```
 
-This replaces all existing leads. With `SEED_DEMO=true` the server does the same by itself whenever the database is empty, which keeps the live demo filled after Render's free tier restarts. Leave it `false` for a real business.
+This **replaces everything** with two fictional businesses: BrightPath Solar (17 chats) and Stride Shoes (10 chats), each with leads in every stage, chats in English and Roman Urdu, unanswered questions, Q&A pairs and an audit history. With `SEED_DEMO=true` the server does this by itself when the database has no accounts.
+
+## Put it online (Render + free PostgreSQL)
+
+1. Create a free PostgreSQL database (for example on [neon.tech](https://neon.tech)) and copy its connection string. Keep it secret: it goes only into Render, never into git or chat.
+2. On [render.com](https://render.com), choose **New > Blueprint** and pick this repository. Render reads `render.yaml`.
+3. When asked, enter `DATABASE_URL`, `DEMO_PASSWORD`, and the AI key (`GEMINI_API_KEY` or `ANTHROPIC_API_KEY`). `SECRET_KEY` is generated by Render.
+4. Open the `onrender.com` link. Sign-ups, leads and knowledge-base edits are kept in PostgreSQL, so they survive Render's free-tier restarts (uploaded files' text is stored in the database too).
+
+The free service sleeps after a period without visits; the first visit then takes about a minute. Spending guards: at most `LLM_HOURLY_LIMIT` Claude replies per hour site-wide and `MAX_CLAUDE_MESSAGES_PER_CHAT` per conversation; beyond either, the offline bot answers.
 
 ## Project report
 
-`report/report.md` is the report text. Build the styled PDF (Fraunces + Inter, the LeadBot palette, figures drawn from the live code) with:
+`report/report.md` is the report text. Build the styled PDF with:
 
 ```bash
 pip install markdown
 python report/build_report.py
 ```
 
-Fill in the cover details (roll number, supervisor, department, university) at the top of `report/build_report.py` first. The PDF is written to `report/LeadBot-FYP-Report.pdf`; it is printed by Microsoft Edge or Google Chrome in headless mode.
-
-## Admin login
-
-`/admin`, the bot tester (`/chat`) and all admin APIs need the owner login set by `ADMIN_USER` / `ADMIN_PASSWORD` (the browser shows its own login box). With no password set, the admin panel only opens on the computer running the server, so a deployment can never be left open by accident.
-
-## Put it online (Render, free)
-
-1. Push this folder to a GitHub repository (`.gitignore` keeps `.env` and `leadbot.db` out).
-2. On [render.com](https://render.com), sign in with GitHub, choose **New > Blueprint**, and pick the repository. Render reads `render.yaml`.
-3. When asked, enter `ADMIN_PASSWORD` and the key for your provider: `GEMINI_API_KEY` (with `LLM_PROVIDER=gemini`) or `ANTHROPIC_API_KEY` (with `LLM_PROVIDER=claude`).
-4. Open the `onrender.com` link Render gives you. The admin panel is at `/admin`.
-
-Free-tier notes: the service sleeps after a period of no visits (the first visit then takes about a minute), and its disk is reset on every restart or deploy, so leads, uploads and knowledge-base edits made on the live site are temporary. A paid plan with a persistent disk keeps them.
-
-Spending guards: at most `LLM_HOURLY_LIMIT` Claude replies per hour site-wide, and `MAX_CLAUDE_MESSAGES_PER_CHAT` per conversation. Beyond either, the offline bot answers. Also set a monthly spend limit in the Anthropic Console.
-
-## Use your own business
-
-Replace `kb/business.md` with your own FAQs, pricing, and policies (headings `##` become chunks), and set `BUSINESS_NAME` in `.env`.
-
-## Embed on any site
-
-```html
-<script src="https://YOUR-HOST/static/widget.js" defer></script>
-```
-
 ## Project layout
 
 ```
-app/main.py      API + routing
-app/rag.py       knowledge-base retrieval
-app/ingest.py    reads PDF / Word / TXT / MD files and web pages into topics
-app/llm.py       LLM call (Claude) + offline mock
-app/scoring.py   lead scoring rules
-app/classifier.py trained lead classifier (scikit-learn)
-train_classifier.py  trains it -> models/lead_classifier.joblib
-app/crm.py       CRM webhook sync
-app/db.py        SQLite storage
-static/          chat widget, demo site, dashboard
-kb/              knowledge base (markdown)
+app/main.py        API, accounts, pages
+app/business.py    industry templates and per-business bot settings
+app/auth.py        sign-up/login: password hashing, session cookie, lockout
+app/rag.py         knowledge-base retrieval, one index per business
+app/ingest.py      reads PDF / Word / TXT / MD files and web pages into topics
+app/llm.py         Gemini / Claude call + offline bot
+app/scoring.py     lead scoring rules
+app/classifier.py  trained lead classifier (scikit-learn)
+app/crm.py         optional CRM webhook sync
+app/db.py          SQLite or PostgreSQL storage
+app/seed.py        two fictional demo businesses
+static/landing.html, auth.html     product home page, sign-up and log-in
+static/setup.*                     setup wizard with live preview
+static/admin.*                     owner dashboard
+static/bot.*                       the chat window (shown in the iframe)
+static/widget.js                   the embed loader businesses paste on their site
+static/demo/                       BrightPath Solar and Stride Shoes demo websites
+kb/business.md                     solar template knowledge base
 ```
 
-## Known limits (good for the report's "future work")
+## Known limits (future work)
 
-- The classifier's starter training set (`data/labeled_leads.csv`, 62 rows) is hand-written and illustrative; replace or extend it with real labeled conversations and re-run `python train_classifier.py`.
-- The admin panel has no login yet; add auth before real deployment.
-- Retrieval is TF-IDF; swap in embeddings + a vector store for larger knowledge bases.
+- The classifier's starter training set (62 rows) is hand-written and illustrative; replace it with real labeled conversations and re-run `python train_classifier.py`. It is shared by all businesses.
+- One owner login per business (no team members or roles yet), and no password reset by email.
+- Retrieval is TF-IDF; embeddings and a vector store would suit larger knowledge bases.

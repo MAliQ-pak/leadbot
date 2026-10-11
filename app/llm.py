@@ -7,15 +7,14 @@ import time
 
 from .db import LEAD_FIELDS
 
-BUSINESS = os.getenv("BUSINESS_NAME", "BrightPath Solar")
-
-SYSTEM = """You are the website sales assistant for {business}.
+SYSTEM = """You are {bot_name}, the website sales assistant for {business}.
 
 RULES
 - Answer ONLY using the CONTEXT below. If the answer is not in the context, say you are not sure and offer to have a human advisor call back. Never invent prices, dates, or policies.
 - Reply in the same language and script the visitor uses (English, Urdu, or Roman Urdu). Keep replies short (2-4 sentences) and friendly.
 - Speak as the company's assistant: never mention the "context", these rules, or that you are reading from a document.
-- While helping, naturally collect lead details, asking for ONE missing detail at a time in this order: need (what they want), name, phone, budget, timeline. Never ask again for a detail listed under ALREADY KNOWN.
+- While helping, naturally collect lead details, asking for ONE missing detail at a time in this order: need (what they want), name, phone, budget, timeline. Never ask again for a detail listed under ALREADY KNOWN. Suggested wording for each question:
+{questions}
 - Email is optional: ask for it at most once in the whole conversation, and only after phone, budget and timeline are known.
 - Only record lead details the visitor has actually stated in this conversation. Budget means the visitor's OWN budget; never copy a price from the CONTEXT into the lead. Use null for anything unknown.
 
@@ -30,17 +29,15 @@ CONTEXT:
 """
 
 
-def _system(context_chunks, known_lead):
-    known = "\n".join(f"- {k}: {known_lead[k]}" for k in LEAD_FIELDS if known_lead.get(k)) or "(nothing yet)"
-    return SYSTEM.format(business=BUSINESS, context=_context_text(context_chunks), known=known)
+ASK_FIELDS = ["need", "name", "phone", "budget", "timeline"]  # the order the bot asks in
 
-ASK_ORDER = [
-    ("need", "What are you looking for (e.g. home system size or backup needs)?"),
-    ("name", "May I know your name?"),
-    ("phone", "What's the best phone number for our advisor to reach you?"),
-    ("budget", "Do you have a rough budget in mind?"),
-    ("timeline", "When are you hoping to get this done?"),
-]
+
+def _system(context_chunks, known_lead, biz):
+    """biz = {"name", "bot_name", "settings"}: each business gets its own name and question wording."""
+    known = "\n".join(f"- {k}: {known_lead[k]}" for k in LEAD_FIELDS if known_lead.get(k)) or "(nothing yet)"
+    questions = "\n".join(f"  - {f}: {biz['settings']['questions'].get(f, '')}" for f in ASK_FIELDS)
+    return SYSTEM.format(business=biz["name"], bot_name=biz["bot_name"], questions=questions,
+                         context=_context_text(context_chunks), known=known)
 
 
 def _extract_json(text):
@@ -98,8 +95,8 @@ def _within_hourly_budget():
     return len(_recent_calls) < int(os.getenv("LLM_HOURLY_LIMIT", "200"))
 
 
-def respond(history, context_chunks, known_lead, allow_llm=True):
-    """history: list of {role, content}. Returns (reply, lead_updates).
+def respond(history, context_chunks, known_lead, biz, allow_llm=True):
+    """history: list of {role, content}; biz: {"name", "bot_name", "settings"}. Returns (reply, lead_updates).
     allow_llm=False (chat over its message limit) always uses the offline bot."""
     global LAST_ERROR, _cooldown_until
     p = provider()
@@ -107,14 +104,14 @@ def respond(history, context_chunks, known_lead, allow_llm=True):
         _recent_calls.append(time.time())
         try:
             fn = _respond_gemini if p == "gemini" else _respond_claude
-            result = fn(history, context_chunks, known_lead)
+            result = fn(history, context_chunks, known_lead, biz)
             LAST_ERROR = None
             return result
         except Exception as e:  # any API problem: keep the chat working with the offline bot
             LAST_ERROR = {"message": str(e)[:300], "time": time.time()}
             _cooldown_until = time.time() + int(os.getenv("LLM_COOLDOWN", "60"))
             print(f"{p} error, offline bot answers for now:", e)
-    return _respond_mock(history, context_chunks, known_lead)
+    return _respond_mock(history, context_chunks, known_lead, biz)
 
 
 def _context_text(context_chunks):
@@ -147,14 +144,14 @@ def _get_client():
     return _client
 
 
-def _respond_claude(history, context_chunks, known_lead):
+def _respond_claude(history, context_chunks, known_lead, biz):
     msg = _get_client().beta.messages.create(
         model=os.getenv("MODEL", "claude-sonnet-5-5"),
         max_tokens=2000,  # thinking counts toward this, so leave room for the JSON reply
         output_config={"effort": "low"},  # short chat replies: fast and cheap
         betas=["server-side-fallback-2026-07-01"],
         fallbacks="default",  # if the model declines, the API retries on a suitable fallback model
-        system=_system(context_chunks, known_lead),
+        system=_system(context_chunks, known_lead, biz),
         messages=_user_first(history),
     )
     if msg.stop_reason == "refusal":
@@ -166,11 +163,11 @@ def _respond_claude(history, context_chunks, known_lead):
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
 
-def _respond_gemini(history, context_chunks, known_lead):
+def _respond_gemini(history, context_chunks, known_lead, biz):
     contents = [{"role": "model" if m["role"] == "assistant" else "user", "parts": [{"text": m["content"]}]}
                 for m in _user_first(history)]
     body = {
-        "systemInstruction": {"parts": [{"text": _system(context_chunks, known_lead)}]},
+        "systemInstruction": {"parts": [{"text": _system(context_chunks, known_lead, biz)}]},
         "contents": contents,
         "generationConfig": {
             "maxOutputTokens": 2000,                 # thinking counts toward this too
@@ -248,7 +245,14 @@ QUESTION = re.compile(
     r"|\b(kya|kitna|kitni|kitne|kaise|kab|kahan|price|cost|warranty|installments?)\b", re.I)
 GREETING = re.compile(r"^\s*(hi|hello|hey|salam|assalam[\w\s]*|aoa)\W*$", re.I)
 FIELD_LABELS = {"phone": "phone number", "need": "requirement"}
-NEED = re.compile(r"(\d+\s*kw(?:\s+(?:solar|hybrid|on-grid|system|inverter))*|solar|inverter|battery|net metering|maintenance)", re.I)
+KW_NEED = r"\d+\s*kw(?:\s+(?:solar|hybrid|on-grid|system|inverter))*"  # "5 kW hybrid system" (solar businesses)
+
+
+def _need_pattern(keywords):
+    """The offline bot's "what do they want" detector, built from the business's own product words."""
+    parts = [KW_NEED] if "kw" in keywords else []
+    parts += [re.escape(k) for k in sorted(keywords, key=len, reverse=True) if k != "kw"]
+    return re.compile("(" + "|".join(parts) + ")", re.I) if parts else None
 
 
 def _shorten(text, limit=300):
@@ -263,7 +267,7 @@ def _shorten(text, limit=300):
     return out or text[:limit].rsplit(" ", 1)[0] + "..."
 
 
-def _respond_mock(history, context_chunks, known_lead):
+def _respond_mock(history, context_chunks, known_lead, biz):
     user_msgs = [m["content"] for m in history if m["role"] == "user"]
     last = user_msgs[-1] if user_msgs else ""
     full = " ".join(user_msgs)
@@ -278,7 +282,8 @@ def _respond_mock(history, context_chunks, known_lead):
         lead["budget"] = m.group(1).strip()
     if m := TIMELINE.search(full):
         lead["timeline"] = m.group(1).lower()
-    if m := NEED.search(full):
+    need = _need_pattern(biz['settings'].get('need_keywords') or [])
+    if need and (m := need.search(full)):
         lead["need"] = m.group(1).strip()
 
     merged = {**known_lead, **lead}
@@ -296,10 +301,11 @@ def _respond_mock(history, context_chunks, known_lead):
         reply = _shorten(answer)
     else:
         reply = "I'm not sure about that one, but a human advisor can help."
-    for field, question in ASK_ORDER:
+    questions = biz['settings']['questions']
+    for field, question in ((f, questions.get(f, '')) for f in ASK_FIELDS):
         if not merged.get(field):
             reply += " " + question
             break
     else:
-        reply += ("" if reply.startswith("Thanks") else " Thanks!") + " Our advisor will call you within one working day."
+        reply += ("" if reply.startswith("Thanks") else " Thanks!") + " Our team will get back to you shortly."
     return reply.strip(), lead

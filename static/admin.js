@@ -4,7 +4,9 @@ const esc = s => (s == null ? "" : String(s)).replace(/[&<>"']/g, c => ({ "&": "
 const FIELDS = ["name", "phone", "email", "need", "budget", "timeline"];
 // Deal stages, left to right on the Pipeline board (same list as db.STATUSES on the server)
 const STATUSES = ["new", "contacted", "site_visit", "quote_sent", "won", "lost"];
-const STATUS_LABEL = { new: "New", contacted: "Contacted", site_visit: "Site visit booked", quote_sent: "Quote sent", won: "Won", lost: "Lost" };
+// each business names its stages (a shoe shop: "Order confirmed", "Out for delivery"); loaded from /api/me
+let STATUS_LABEL = { new: "New", contacted: "Contacted", site_visit: "Stage 3", quote_sent: "Stage 4", won: "Won", lost: "Lost" };
+let ME = null;
 const stageName = s => STATUS_LABEL[s] || s;
 const OPEN = l => l.status !== "won" && l.status !== "lost";
 const TABS = [
@@ -38,6 +40,7 @@ const cell = v => v ? `<td>${esc(v)}</td>` : `<td class="none">-</td>`;
 
 async function api(path, opts) {
   const r = await fetch(path, opts);
+  if (r.status === 401) { location.href = "/login"; throw new Error("401"); }  // session expired
   if (!r.ok) throw new Error(r.status);
   return r.json();
 }
@@ -155,7 +158,7 @@ async function refreshDrawer() {
   // only reload the transcript when new messages arrived
   if (shownMsgCount !== l.messages) {
     shownMsgCount = l.messages;
-    const msgs = await api("/api/conversations/" + encodeURIComponent(l.session_id)).catch(() => []);
+    const msgs = await api("/api/admin/conversations/" + encodeURIComponent(l.session_id)).catch(() => []);
     $("d-chat").innerHTML = msgs.map(m => `<div class="m ${m.role}">${esc(m.content)}
       <time>${new Date(m.created * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time></div>`).join("")
       || '<div class="empty">No messages.</div>';
@@ -226,8 +229,19 @@ $("d-delete").onclick = deleteLead;
 
 api("/api/health").then(h => {
   $("mode").textContent = "Bot mode: " + (MODE_LABEL[h.mode] || h.mode);
-  $("biz").textContent = h.business + " admin";
 }).catch(() => {});
-route();
-load();
+$("logout").onclick = async () => { await fetch("/api/auth/logout", { method: "POST" }); location.href = "/login"; };
+
+// who is logged in decides the business name, its stage names and its demo website link
+api("/api/me").then(me => {
+  ME = me;
+  STATUS_LABEL = me.business.settings.stage_names;
+  $("biz").textContent = me.business.name;
+  $("user").textContent = me.user.email;
+  const demos = ["brightpath-solar", "stride-shoes"];
+  $("site-link").href = demos.includes(me.business.slug) ? "/demo/" + me.business.slug : (me.business.website || "/bot/" + me.business.slug);
+  document.title = me.business.name + " | LeadBot";
+  route();
+  load();
+}).catch(() => {});
 setInterval(load, 5000);
