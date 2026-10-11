@@ -25,19 +25,19 @@ import markdown
 
 # ---------- cover page details: fill these in, then rebuild ----------
 TITLE = "LeadBot"
-SUBTITLE = "An AI lead-qualification chatbot for small businesses"
+SUBTITLE = "An AI lead-qualification chatbot that any small business can set up for itself"
 # (name, roll number, area owned) - the order here is the order on the cover and in the report
 TEAM = [
-    ("Mohammed Maarij", "19252105", "Website, chat widget and user-interface design"),
-    ("Abdul Manan Khan", "19252165", "AI and retrieval: RAG, Gemini / Claude, prompt, offline bot, knowledge-base training"),
-    ("Muhammad Ali Qureshi", "19252094", "Backend, admin panel (pipeline, audit log), security and deployment"),
+    ("Mohammed Maarij", "19252105", "Product pages, setup wizard, chat window and embed code, demo websites, user-interface design"),
+    ("Abdul Manan Khan", "19252165", "AI and retrieval: RAG, Gemini / Claude, prompt, offline bot, industry templates, knowledge-base training"),
+    ("Muhammad Ali Qureshi", "19252094", "Backend, accounts and data separation, dashboard (pipeline, audit log), security, database and deployment"),
     ("Muhammad Hamza Younus", "19252201", "Lead scoring, the classifier, testing and evaluation"),
 ]
 # main files per member, shown in the report's Team and contributions table
 TEAM_FILES = {
-    "Mohammed Maarij": "static/index.html, site.css, widget.js, chat.html/.css/.js, static/fonts/",
-    "Abdul Manan Khan": "app/rag.py, app/llm.py, app/ingest.py, static/admin-kb.js, kb/business.md",
-    "Muhammad Ali Qureshi": "app/main.py, app/db.py, app/auth.py, static/admin.*, admin-pipeline.js, render.yaml",
+    "Mohammed Maarij": "static/landing.html, auth.html, setup.*, bot.*, widget.js, product.css, demo/, static/fonts/",
+    "Abdul Manan Khan": "app/rag.py, app/llm.py, app/ingest.py, app/business.py, static/admin-kb.js, kb/business.md",
+    "Muhammad Ali Qureshi": "app/main.py, app/db.py, app/auth.py, app/seed.py, static/admin.*, admin-pipeline.js, render.yaml",
     "Muhammad Hamza Younus": "app/scoring.py, app/classifier.py, train_classifier.py, data/labeled_leads.csv",
 }
 SUPERVISOR = "Muhammad Siddique"
@@ -51,8 +51,9 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 DOCS = [  # (source, output name, cover eyebrow, cover lede, footer, has figures)
     ("report.md", "LeadBot-FYP-Report", "Final Year Project Report",
-     "A website chatbot that answers from a business's own knowledge base in English and Roman Urdu, "
-     "captures and scores leads, and gives the owner a pipeline, an audit log and four ways to train the bot.",
+     "A chatbot product that a business signs up for, trains on its own information in a guided setup with a live "
+     "preview, and adds to its website with one line of code. It answers in English and Roman Urdu, captures and "
+     "scores leads, and gives each owner their own pipeline, audit log and ways to train the bot.",
      "Final Year Project Report", True),
     ("presentation-guide.md", "LeadBot-Presentation-Guide", "Presentation and viva guide",
      "Who presents what in a 30-minute slot, the exact demo steps, a code walkthrough for each member, "
@@ -98,20 +99,20 @@ def fig_architecture():
     paths = "".join(f"<path d='{d}' marker-end='url(#a)'{' marker-start=\"url(#a)\"' if both else ''}/>" for d, both in arrows)
     return f"""<svg viewBox='0 0 760 470' xmlns='http://www.w3.org/2000/svg' role='img' aria-label='LeadBot architecture'>
 <defs><marker id='a' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='6' markerHeight='6' orient='auto-start-reverse'><path d='M0 0L10 5L0 10z' fill='{edge}'/></marker></defs>
-{svg_text(24, 28, "Every reply is grounded in the owner's knowledge base, with an offline fallback", 15, 600, family=FONT_DISPLAY)}
+{svg_text(24, 28, "Each business has its own bot, knowledge and leads; every reply is grounded in its text", 15, 600, family=FONT_DISPLAY)}
 <rect x='240' y='50' width='280' height='402' rx='10' fill='{C['cream']}' stroke='{C['line']}' stroke-width='1.25'/>
 {svg_text(256, 76, "FastAPI server, one process", 12.5, 600, C['green_d'])}
 <g fill='none' stroke='{edge}' stroke-width='1.25'>{paths}</g>
-{card(24, 92, 180, H, "Website visitor", ["chat widget on any site"])}
-{card(24, 380, 180, H, "Business owner", ["admin panel, password"])}
-{card(256, 92, W, H, "Chat API", ["saves the message, runs each step"])}
-{card(256, 164, W, H, "Retrieval", ["TF-IDF, top 3 topics, 0.3 threshold"])}
+{card(24, 92, 180, H, "Customer's website", ["one script tag: bubble + iframe"])}
+{card(24, 380, 180, H, "Business owner", ["sign-up, setup, dashboard"])}
+{card(256, 92, W, H, "Chat API", ["finds the business by its bot name"])}
+{card(256, 164, W, H, "Retrieval", ["that business's text, top 3, 0.3"])}
 {card(256, 236, W, H, "AI layer", ["JSON reply; offline bot if AI fails"], main=True)}
 {card(256, 308, W, H, "Lead scoring", ["rules + classifier, blended 50/50"])}
-{card(256, 380, W, H, "Admin API", ["pipeline, audit log, KB; login"])}
-{card(556, 164, 180, H, "Main text", ["kb/business.md"])}
+{card(256, 380, W, H, "Owner API", ["login; only its own business's data"])}
+{card(556, 164, 180, H, "Industry templates", ["solar, shoes, blank"])}
 {card(556, 236, 180, H, "Gemini or Claude", ["external AI over HTTPS"])}
-{card(556, 308, 180, 128, "SQLite database", ["leads and messages", "Q&A pairs, documents", "unanswered, audit log"])}
+{card(556, 308, 180, 128, "SQLite or PostgreSQL", ["businesses, owner accounts", "leads, messages, Q&A, docs", "every row has business_id"])}
 </svg>"""
 
 
@@ -165,16 +166,19 @@ QUESTIONS = [  # (question, covered by the knowledge base?, note)
     ("5kw ki qeemat kitni hai? (Roman Urdu)", True, ""),
     ("do you have jobs?", False, ""), ("do you install in Multan?", False, "missed: the city list implies no"),
     ("is there a discount for students?", False, ""), ("what brand of inverter do you use?", False, ""),
-    ("are panels made in china?", False, ""), ("can I pay with credit card?", False, ""),
+    ("are panels made in china?", False, ""), ("can I pay with credit card?", False, "shoe-shop synonym: 'pay' finds 'down payment'"),
     ("do you sell generators?", False, ""),
 ]
 
 
 def live_retrieval():
+    """Scores on the solar template alone, in a throwaway database, so demo data never changes the figure."""
     sys.path.insert(0, str(ROOT))
-    from app import db, rag
+    os.environ.pop("DATABASE_URL", None)  # never touch the live database
+    from app import business, db, rag
+    db.DB_PATH = Path(tempfile.mkdtemp(prefix="leadbot-fig-")) / "figure.db"
     db.init()
-    kb = rag.get_kb()
+    kb = rag.get_kb(business.create_from_template("BrightPath Solar", "solar"))
     rows = []
     for q, covered, note in QUESTIONS:
         query = q.replace(" (Roman Urdu)", "")
@@ -355,10 +359,10 @@ def build_html(source, out_html, eyebrow, lede, footer, with_figures):
         retrieval, threshold = live_retrieval()
         n_cov = sum(1 for r in retrieval if r[1])
         figs = {
-            "architecture": figure(fig_architecture(), "LeadBot architecture: ten components in one server process.", 1),
+            "architecture": figure(fig_architecture(), "LeadBot architecture: one server for every business, with each row of data tagged by its business.", 1),
             "weights": figure(fig_weights(weights), f"Classifier weights, read from models/lead_classifier.joblib ({len(weights)} features, trained on all 62 labelled leads).", 2),
             "retrieval": figure(fig_retrieval(retrieval, threshold),
-                                f"Retrieval scores computed by app/rag.py on the BrightPath knowledge base when this report was built: "
+                                f"Retrieval scores computed by app/rag.py on the solar template (BrightPath Solar) when this report was built: "
                                 f"{n_cov} answerable and {len(retrieval) - n_cov} off-topic questions.", 3),
         }
         for key, fig in figs.items():
