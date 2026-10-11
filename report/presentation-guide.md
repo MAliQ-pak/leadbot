@@ -237,7 +237,7 @@ Use the Kicks Corner bot just created (its direct link, or the bubble on `my-sho
 4. Click **Answer**, type "Yes, cotton socks are Rs 300 a pair, or 3 pairs for Rs 800", add "jurabein milti hain?" under other ways to ask. Save.
 5. Back in the chat, type **jurabein milti hain?** It now answers.
 6. In **Test the knowledge**, type the same question to show the match score and the source label.
-7. Optional, if time: upload a short PDF price list under Documents & websites and ask about it.
+7. Optional, if time: under Documents & websites, choose **All pages on this website**, paste a small real website's address and press Import. It lists every page it read; ask the bot about one of them.
 
 ### 5.4 Code walkthrough
 
@@ -247,7 +247,7 @@ Use the Kicks Corner bot just created (its direct link, or the bubble on `my-sho
 | `app/rag.py` | `COMMON_SYNONYMS`, `STOPWORDS` and `CONFIDENT = 0.3` at the top. `KnowledgeBase(business_id)` loads that business's main text, Q&A pairs and documents, and merges the common synonyms with its template's own; `search_scored()` returns the top 3 with scores. `get_kb(id)` keeps one index per business; `reload_kb(id)` rebuilds it after a change. |
 | `app/llm.py` | `SYSTEM` is the prompt, filled with the business's name, bot name and questions by `_system()`. `respond()` picks the provider, applies limits and the cool-down, and falls back to `_respond_mock()`. `_gemini_post()` tries each model, with 8 seconds for the main one and a 5-minute rest for a model that failed. |
 | `app/main.py`, function `chat()` | Finds the business, runs retrieval, retries short follow-ups with the previous question, logs unanswered questions and clears the context below 0.3. |
-| `app/ingest.py` | Reads PDF (pypdf), Word (straight from the .docx zip), TXT and Markdown, imports a web page, and splits text into topics. |
+| `app/ingest.py` | Reads PDF (pypdf), Word (straight from the .docx zip), TXT and Markdown, and splits text into topics. `crawl(url, mode)` imports one page, a section or a whole website; `_check_public()` refuses private addresses; `_drop_repeats()` removes paragraphs repeated on most pages. |
 | `static/admin-kb.js` | The Bot & knowledge page: Q&A form, Unanswered list, uploads (read in the browser and sent as base64), the test box. |
 
 ### 5.5 Cross-questions and answers
@@ -266,6 +266,12 @@ For tens of topics per business, TF-IDF is accurate enough, instant, free, offli
 
 **How did you choose 0.3?**
 By measurement: answerable questions scored 0.53 and above, off-topic ones mostly 0.26 and below, so 0.3 sits in the gap. It is a setting, so it can be retuned on real chats.
+
+**How does the website import find every page?**
+It reads the first page, collects its links, and keeps following links on the same website, plus the site's sitemap, breadth-first, up to 30 pages or 60 seconds. "All pages under this address" only keeps pages whose address starts with the one given. It obeys `robots.txt`, skips images and files, keeps a paragraph repeated on every page (like the address) only once, and stores each page as its own document, so re-importing replaces rather than duplicates. It is the same idea as the knowledge-base crawler in GoHighLevel.
+
+**Isn't a crawler on your server dangerous?**
+It could be, if someone pointed it at addresses inside our hosting network, such as the cloud provider's metadata address. So every address, including after each redirect, is checked and private ones are refused; we tested `localhost`, `10.0.0.5` and the metadata address. It also never follows links to other websites.
 
 **Can one business's knowledge leak into another's answers?**
 No: each business has its own index, built only from rows with its business ID. At first they shared one synonym table, and testing caught a side effect: adding "pay" and "card" for the shoe shop made "can I pay with credit card?" match the solar company's financing text at 0.38. We moved each industry's words into its own template, and the solar score went back to 0.10. Only a short list of common price and hours words is shared now.
@@ -294,6 +300,7 @@ On the free tier Google may use the content to improve its products, so we use f
 - **The sample templates were written by us**, not with real clinics, restaurants or salons.
 - **The threshold was tuned on a small set** of our own questions.
 - **The offline bot uses only the best-matching topic**, so it can give a partial answer to a two-topic question.
+- **The website importer reads plain HTML**: sites that build their pages with JavaScript show almost no text, and it stops at 30 pages.
 - **Indexes live in memory** and are rebuilt for each business after a restart (fast at this size).
 - **The free Gemini quota is small**, and free-tier data may be used by Google.
 

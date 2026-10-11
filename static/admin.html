@@ -162,8 +162,13 @@
               <span>PDF, Word (.docx), TXT or Markdown, up to 5 MB. Click or drop a file here.</span>
             </label>
             <form id="url-form" class="url-box">
-              <b>Import a web page</b>
-              <span>Paste a page address, e.g. the business's existing website. Needs internet.</span>
+              <b>Import a website</b>
+              <span>Paste the business's website address. LeadBot reads every page it links to (up to 30). Needs internet.</span>
+              <select id="crawl-mode" aria-label="What to import">
+                <option value="domain">All pages on this website</option>
+                <option value="path">All pages under this address</option>
+                <option value="exact">Only this page</option>
+              </select>
               <div class="inline-form">
                 <input id="url-in" type="url" placeholder="https://example.com/services" required>
                 <button class="btn" type="submit">Import</button>

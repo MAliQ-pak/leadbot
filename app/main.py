@@ -110,6 +110,7 @@ class UploadIn(BaseModel):
 
 class UrlIn(BaseModel):
     url: str = Field(min_length=8, max_length=500)
+    mode: str = Field(default="exact", pattern="^(exact|path|domain)$")  # one page, a folder, or the whole site
 
 
 # ---------- the public chat API (used by every business's bot) ----------
@@ -446,13 +447,27 @@ def upload_doc(body: UploadIn, ctx=Owner):
 
 @app.post("/api/kb/url")
 def import_url(body: UrlIn, ctx=Owner):
+    """Import one page, every page under its folder, or the whole website (up to 30 pages, 60 seconds).
+    Each page is stored as its own document; importing a page again replaces the old copy."""
+    bid, url = ctx["biz"]["id"], body.url.strip()
     try:
-        title, text = ingest.fetch_url(body.url.strip())
+        pages, notes = ingest.crawl(url, body.mode)
     except ingest.IngestError as e:
         raise HTTPException(400, str(e))
-    result = _add_doc(ctx, title[:120], "url", body.url.strip(), text)
-    db.audit(ctx["biz"]["id"], "kb", "Web page imported", body.url.strip(), actor=ctx["user"]["email"])
-    return result
+    imported = []
+    for page_url, title, text in pages:
+        if not ingest.chunk(title, text):
+            continue
+        db.execute("DELETE FROM kb_docs WHERE business_id=? AND kind='url' AND origin=?", (bid, page_url))
+        db.execute("INSERT INTO kb_docs(business_id, name, kind, origin, text, created) VALUES (?,?,?,?,?,?)",
+                   (bid, title[:120], "url", page_url, text, time.time()))
+        imported.append({"url": page_url, "title": title[:120]})
+    if not imported:
+        raise HTTPException(400, "No usable text found.")
+    rag.reload_kb(bid)
+    what = {"exact": "Web page imported", "path": "Website section imported", "domain": "Website imported"}[body.mode]
+    db.audit(bid, "kb", what, f"{url} ({len(imported)} page{'s' if len(imported) != 1 else ''})", actor=ctx["user"]["email"])
+    return {**get_kb_text(ctx), "imported": imported, "notes": notes}
 
 
 def _add_doc(ctx, name, kind, origin, text):

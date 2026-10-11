@@ -166,6 +166,7 @@ td.none { color: var(--faint); }
 .tabs button.active span.alert { background: #fff; color: var(--danger); }
 .sub-tabs { margin: 14px 0 6px; }
 .inline-form { display: flex; gap: 8px; margin-top: 10px; }
+.url-box select { margin-top: 8px; border: 1px solid var(--line); background: #fff; border-radius: 10px; padding: 9px 12px; font: inherit; font-size: 14px; color: var(--ink); }
 .inline-form input { flex: 1; min-width: 0; border: 1px solid var(--line); background: #fff; border-radius: 10px; padding: 9px 12px; font: inherit; font-size: 14px; color: var(--ink); }
 .inline-form input:focus, .qa-form input:focus, .qa-form textarea:focus { outline: none; border-color: var(--green); }
 .row.between { justify-content: space-between; flex-wrap: wrap; }

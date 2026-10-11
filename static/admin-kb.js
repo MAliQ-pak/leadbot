@@ -190,10 +190,13 @@ $("url-form").onsubmit = async e => {
   e.preventDefault();
   const btn = e.target.querySelector("button");
   btn.disabled = true;
-  $("doc-status").textContent = "Fetching the page...";
+  const mode = $("crawl-mode").value;
+  $("doc-status").textContent = mode === "exact" ? "Fetching the page..." : "Reading the website... this can take up to a minute.";
   try {
-    showKb(await sendWithMessage("/api/kb/url", { url: $("url-in").value }));
-    $("doc-status").textContent = "Page imported. The bot can now answer from it.";
+    const kb = await sendWithMessage("/api/kb/url", { url: $("url-in").value, mode });
+    showKb(kb);
+    const n = kb.imported.length;
+    $("doc-status").textContent = `Imported ${n} page${n === 1 ? "" : "s"}${(kb.notes || []).some(x => x.startsWith("stopped")) ? " (the limit was reached)" : ""}. The bot can now answer from ${n === 1 ? "it" : "them"}.`;
     $("url-in").value = "";
   } catch (err) {
     $("doc-status").textContent = err.message;

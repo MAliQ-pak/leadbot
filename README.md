@@ -29,7 +29,7 @@ Demo logins (after `python -m app.seed`): `owner@brightpath.demo` and `owner@str
 1. **Sign up** at `/signup` with the business name and the closest template. The template gives a working bot straight away: a starting knowledge base (with the business's own name), quick-reply buttons, the questions it asks customers, buying-signal words, its own synonyms (Roman Urdu and everyday words), and pipeline stage names for that industry (a shoe shop gets *Order confirmed* and *Out for delivery* instead of *Site visit booked* and *Quote sent*).
 2. **Setup wizard** (`/app/setup`), with the bot running live beside it:
    1. Business name, website and template.
-   2. Teach the bot: edit the main text (each `##` heading is one topic), import a web page by URL, or upload a PDF, Word, TXT or Markdown file.
+   2. Teach the bot: edit the main text (each `##` heading is one topic), import the business's website (only one page, all pages under an address, or the whole site, up to 30 pages, following links and the sitemap and obeying robots.txt), or upload a PDF, Word, TXT or Markdown file.
    3. Bot name, greeting, brand colour and quick replies.
    4. Lead questions, product words, buying signals and pipeline stage names.
    5. Install: copy the embed code.

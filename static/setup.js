@@ -90,10 +90,21 @@ $("save-2").onclick = e => guarded(e.target, async () => {
   await loadKb(); reloadPreview();
   show(3);
 });
+function importSummary(kb) {
+  const n = kb.imported.length, names = kb.imported.slice(0, 5).map(p => p.title).join(", ");
+  const more = n > 5 ? ` and ${n - 5} more` : "";
+  const notes = (kb.notes || []).filter(x => x.startsWith("stopped")).join("; ");
+  return `Imported ${n} page${n === 1 ? "" : "s"}: ${names}${more}.${notes ? " (" + notes + ")" : ""} The bot can now answer from ${n === 1 ? "it" : "them"}.`;
+}
+const CRAWL_WAIT = { domain: "Reading the website... this can take up to a minute.",
+                     path: "Reading those pages... this can take up to a minute.", exact: "Fetching the page..." };
 $("url-go").onclick = e => guarded(e.target, async () => {
-  $("import-msg").textContent = "Fetching the page...";
-  const kb = await api("/api/kb/url", json("POST", { url: $("url-in").value.trim() }));
-  $("import-msg").textContent = `Imported. The bot now knows ${kb.topics} topics.`;
+  const mode = $("crawl-mode").value;
+  $("import-msg").textContent = CRAWL_WAIT[mode];
+  let kb;
+  try { kb = await api("/api/kb/url", json("POST", { url: $("url-in").value.trim(), mode })); }
+  catch (err) { $("import-msg").textContent = err.message; return; }
+  $("import-msg").textContent = importSummary(kb);
   $("topic-count").textContent = `(${kb.topics} topics the bot can answer from)`;
   reloadPreview();
 });

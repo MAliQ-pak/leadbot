@@ -207,7 +207,7 @@ The sample knowledge bases are fictional but realistic, with Pakistani prices, t
 After sign-up, the owner lands in the **setup wizard**, with the bot running live beside it:
 
 1. **Your business**: name, website, and the template, which can be switched.
-2. **Teach your bot**: edit the main text, import a web page by URL, or upload a PDF, Word, TXT or Markdown file.
+2. **Teach your bot**: edit the main text, import the business's existing website, or upload a PDF, Word, TXT or Markdown file.
 3. **Look and greeting**: bot name, greeting, brand colour and quick replies.
 4. **Lead questions**: the five questions, product words, buying signals and stage names.
 5. **Install**: the embed code, the iframe snippet and the direct link, each with a copy button.
@@ -271,7 +271,7 @@ The owner can teach the bot in four ways, and every change rebuilds that busines
 
 1. **Q&A pairs**: a question, other ways to ask it (for example in Roman Urdu) and the answer.
 2. **Unanswered questions**: questions the bot could not answer are listed with how often they were asked. The owner types an answer once and it becomes a Q&A pair.
-3. **Documents and web pages**: PDF, Word, TXT or Markdown files up to 5 MB, or a page imported by URL, split into topics at headings and roughly every 700 characters.
+3. **Documents and websites**: PDF, Word, TXT or Markdown files up to 5 MB, or a website imported by its address, split into topics at headings and roughly every 700 characters. Like the knowledge-base crawler in CRM tools such as GoHighLevel, the importer has three modes: only this page, all pages under this address (for example everything under `/services/`), or all pages on the website. It starts at the given page and follows the site's own links, also reading its sitemap so pages the menu does not link to are found, and stays on the same website. Each page is stored as its own document, so the owner can see and delete pages one by one, and importing a page again replaces the old copy.
 4. **Main text**: direct editing of the business's main text, in the wizard or the dashboard.
 
 The test box shows which topics a question matches, with a match percentage and whether the bot will answer or say it is not sure.
@@ -283,6 +283,7 @@ The test box shows which topics a question matches, with a match percentage and 
 - **Lockout:** five failed logins from one address within 15 minutes block that address for 15 minutes. Logins and failed logins are written to the audit log.
 - **Data separation:** every owner route takes the business from the session, never from the request, and every query filters by that business's ID. A chat session belongs to the first business it was used with; the same session ID sent to another business's bot is refused, so a lead can never move between businesses.
 - **Secrets:** API keys, the database address, `SECRET_KEY` and the demo password live in environment variables, never in the code or the repository. On the live site, start-up resets the demo accounts to the server's own `DEMO_PASSWORD`, so data copied from a laptop never keeps the laptop's password.
+- **Website import:** the importer refuses addresses on private networks (such as `localhost`, `192.168.x.x` or the cloud provider's internal metadata address), checking again after every redirect, so it cannot be used to read the server's own internal services. It obeys each site's `robots.txt`, identifies itself as `LeadBot-KB-import`, skips files such as images and PDFs, and stops after 30 pages or 60 seconds.
 - **Output:** chat replies are written into the page as text, never as HTML, so a reply cannot inject a script; the dashboard escapes everything it displays.
 - **Cost:** 200 AI replies per hour site-wide and 30 per conversation; beyond either, the offline bot answers.
 - **Updates reach every website:** scripts and styles are served with `Cache-Control: no-cache`, so websites that embed the bot pick up a fix on the next page load.
@@ -403,6 +404,19 @@ Each of the five newer templates was then signed up and given a two-message visi
 
 Each bot was named after its business ("... Assistant") and showed its industry's stage names.
 
+The website importer was tested on a small test site built for the purpose and on a public site made for practising crawlers:
+
+| Test | Expected | Result |
+| --- | --- | --- |
+| Whole website, 8 pages, one page only in the sitemap, one forbidden by `robots.txt`, a PDF and an outside link | 7 pages | 7 pages, including the sitemap-only one; the forbidden page, the PDF and the outside link skipped |
+| All pages under `/blog/` | Only the blog's 3 pages | 3 pages |
+| Only this page | 1 page | 1 page |
+| A paragraph repeated on every page (the shop's address) | Kept once | Kept on the first page only |
+| Importing the same website again | No duplicates | Same 18 topics as before |
+| Bot questions answered only on imported pages (gift cards, shoe care) | Answered from them | "Gift cards are available from Rs 2,000 to Rs 10,000 and never expire" |
+| A public site with hundreds of pages | Stops at the limit | 30 pages in about 9 to 19 seconds; no page fetched twice |
+| `localhost`, `127.0.0.1`, `10.0.0.5` and the cloud metadata address | Refused | All refused: "That address is on a private network" |
+
 ### 6.5 Security and robustness tests
 
 | Test | Expected | Result |
@@ -438,6 +452,7 @@ From the multi-business version:
 - Opening a new database connection for every query made each reply about 2.3 seconds slower from a laptop, where one query to the hosted database took 231 ms. The server now keeps one connection open.
 - While Google's main model was overloaded (one test request took 24 seconds just to return "high demand"), every live reply waited 15 seconds before the fallback answered. The 8-second limit and the 5-minute skip brought replies down to 2 to 5 seconds.
 - The live database had been filled from a laptop, so the demo accounts kept the laptop's simple password. Start-up now resets them to the server's own.
+- The first crawl of a real website fetched its home page twice, as `/` and `/index.html`. Both now count as one address, and a page whose text matches one already imported is skipped.
 - Once, the AI returned its own working notes ("Answering the user's input based on context and rules...") instead of the JSON reply, and the visitor saw them. Any answer that is not the expected JSON is now discarded and the offline bot answers that message instead, still capturing the visitor's details.
 
 ### 6.7 Limits of this evaluation
@@ -549,6 +564,8 @@ The answers are written in the team's voice, ready to say aloud. The companion P
 ### A.6 Dashboard and training
 
 **How does the owner improve the bot without coding?** Four ways: add Q&A pairs, answer questions the bot couldn't, upload documents or import web pages, or edit the main text. Each change rebuilds that business's index, so the bot uses it from the next message. The test box and the live preview show the effect before any visitor asks.
+
+**How does importing a whole website work?** The owner pastes the website's address and picks a mode: only that page, every page under it, or the whole site. LeadBot reads the first page, collects its links, and keeps following links on the same website, plus any listed in the site's sitemap, up to 30 pages or 60 seconds. It obeys the site's `robots.txt`, skips images and files, drops paragraphs repeated on every page, and stores each page as its own document. For safety it refuses private network addresses, so nobody can use it to look inside our server's network.
 
 **What happens when a PDF is uploaded?** The text is extracted, split into topics at headings and roughly every 700 characters, stored under that business, and indexed with everything else. A scanned PDF contains images, not text, so the system reports that it found no readable text.
 

@@ -48,8 +48,13 @@
         <h2>Teach your bot</h2>
         <p class="sub">The bot answers only from what you put here. Each line starting with <b>##</b> is one topic: write prices, policies and opening hours exactly as they are.</p>
         <div class="import">
-          <div class="box"><b>Import your website</b>Paste a page address; its text becomes topics.
-            <div class="inline"><input type="url" id="url-in" placeholder="https://www.example.com/about"><button class="btn btn-sm" id="url-go">Import</button></div></div>
+          <div class="box"><b>Import your website</b>Paste your website's address. LeadBot reads every page it links to (up to 30) and each page becomes topics.
+            <select id="crawl-mode" aria-label="What to import">
+              <option value="domain">All pages on this website</option>
+              <option value="path">All pages under this address</option>
+              <option value="exact">Only this page</option>
+            </select>
+            <div class="inline"><input type="url" id="url-in" placeholder="https://www.example.com"><button class="btn btn-sm" id="url-go">Import</button></div></div>
           <div class="box"><b>Upload a document</b>A price list or brochure: PDF, Word, TXT or Markdown, up to 5 MB.
             <div class="inline"><input type="file" id="file-in" accept=".pdf,.docx,.txt,.md"></div></div>
         </div>
