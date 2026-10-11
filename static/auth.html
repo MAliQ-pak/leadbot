@@ -24,7 +24,7 @@
       <p class="sub">Your business gets its own bot, knowledge base and dashboard.</p>
       <label class="field">Business name<input name="business_name" required minlength="2" maxlength="80" placeholder="Stride Shoes"></label>
       <label class="field">What kind of business?
-        <select name="industry">
+        <select name="industry" id="industry">
           <option value="shoes">Shoe store</option>
           <option value="solar">Solar installer</option>
           <option value="blank">Something else (start from scratch)</option>
@@ -58,6 +58,12 @@
     const form = document.getElementById(mode);
     form.hidden = false;
     form.querySelector("input").focus();
+    // the full template list comes from the server, so a new template appears here by itself
+    if (mode === "signup") fetch("/api/templates").then(r => r.json()).then(list => {
+      const sel = document.getElementById("industry");
+      sel.innerHTML = list.map(t => `<option value="${t.key}">${t.key === "blank" ? "Something else (start from scratch)" : t.label}</option>`).join("");
+      sel.value = "shoes";
+    }).catch(() => { /* keep the three built-in options */ });
     form.onsubmit = async e => {
       e.preventDefault();
       const err = document.getElementById(mode + "-err");

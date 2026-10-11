@@ -33,7 +33,7 @@ function fill() {
   $("biz-name").textContent = b.name;
   $("f-name").value = b.name; $("f-website").value = b.website || "";
   $("tpl").innerHTML = Object.entries(me.templates).map(([k, label]) =>
-    `<button type="button" data-tpl="${k}" class="${k === b.industry ? "active" : ""}"><b>${label}</b><span>${k === "blank" ? "empty sections to fill in" : "ready-made knowledge base"}</span></button>`).join("");
+    `<button type="button" data-tpl="${k}" class="${k === b.industry ? "active" : ""}"><b>${label}</b><span>${(me.template_blurbs || {})[k] || ""}</span></button>`).join("");
   $("f-bot").value = b.bot_name; $("f-greet").value = b.greeting;
   color = b.color || COLORS[0];
   $("colors").innerHTML = COLORS.map(c => `<span class="swatch ${c === color ? "active" : ""}" data-color="${c}" style="background:${c}"></span>`).join("")

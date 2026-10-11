@@ -1,6 +1,6 @@
 ## Abstract
 
-LeadBot is a working chatbot product for small businesses. A business signs up, picks an industry template, teaches the bot its own prices and policies in a five-step setup wizard while testing it in a live preview, and then adds it to its own website with one line of code. The bot answers customer questions only from that business's knowledge, collects lead details in conversation, and scores each lead as hot, warm or cold with a stated reason. The system is deployed at a public link and demonstrated on two fictional businesses, a solar installer (BrightPath Solar) and a shoe store (Stride Shoes).
+LeadBot is a working chatbot product for small businesses. A business signs up, picks one of eight industry templates (from solar installer and shoe store to clinic, restaurant and salon), teaches the bot its own prices and policies in a five-step setup wizard while testing it in a live preview, and then adds it to its own website with one line of code. The bot answers customer questions only from that business's knowledge, collects lead details in conversation, and scores each lead as hot, warm or cold with a stated reason. The system is deployed at a public link and demonstrated on two fictional businesses, a solar installer (BrightPath Solar) and a shoe store (Stride Shoes).
 
 Replies are produced by retrieval-augmented generation: a TF-IDF retriever over character n-grams finds the relevant topics in that business's knowledge base, and a large language model (Google Gemini, or Anthropic Claude) answers only from them. A rule-based offline bot takes over whenever no AI is available, so the demo never depends on internet or payment. Lead scores blend explainable rules with a logistic-regression classifier.
 
@@ -93,7 +93,7 @@ The system serves two users: the **website visitor**, who chats anonymously on a
 | FR10 | Optional push of warm and hot leads to a CRM webhook | System |
 | FR11 | Audit log of owner actions and key system events, filterable by type | Owner |
 | FR12 | Sign up a new business with an owner account; log in and out | Owner |
-| FR13 | Start from an industry template (solar installer, shoe store, or blank) | Owner |
+| FR13 | Start from an industry template (eight, from solar installer and shoe store to clinic, restaurant and salon) | Owner |
 | FR14 | Set up the bot in guided steps: business, knowledge, look and greeting, lead questions, install | Owner |
 | FR15 | Test the bot in a live preview while setting it up, without the test chats counting as leads | Owner |
 | FR16 | Keep every business's leads, chats, knowledge and settings separate from every other's | System |
@@ -193,13 +193,16 @@ The two demo websites use the same embed line. BrightPath Solar shows services, 
 
 ### 5.2 Businesses, templates and the setup wizard
 
-A **template** is a starting configuration for an industry. LeadBot has three: solar installer, shoe store, and start from scratch. Each sets:
+A **template** is a starting configuration for an industry. LeadBot has eight: solar installer, shoe store, clinic or doctor, restaurant or caterer, real estate agency, school or tuition academy, salon or beauty parlour, and start from scratch. Each sets:
 
 - a starting knowledge base, with the sample company's name replaced by the new business's name;
 - the bot's name, greeting, brand colour and quick-reply buttons;
 - how the bot words its five lead questions (a shoe shop asks "Which shoes are you looking for (style and size)?" and "When do you need them by?");
 - the product words the offline bot uses to spot what the visitor wants, and the buying-signal words that raise the lead score ("order", "size", "cod" for shoes; "install", "site visit" for solar);
-- the names of pipeline stages 3 and 4: "Site visit booked" and "Quote sent" for solar, "Order confirmed" and "Out for delivery" for shoes.
+- the names of pipeline stages 3 and 4, such as "Site visit booked" and "Quote sent" for solar, "Order confirmed" and "Out for delivery" for shoes, "Appointment booked" and "Visited" for a clinic, or "Viewing booked" and "Offer made" for real estate;
+- the industry's own synonyms, such as "daant" (teeth) to "dental" for a clinic or "kiraya" (rent) to "renting" for real estate.
+
+The sample knowledge bases are fictional but realistic, with Pakistani prices, timings and policies, and are clearly marked as sample text for the owner to replace. The clinic's sample says the assistant books appointments but cannot give medical advice. The sign-up form and the wizard read the list of templates from the server, so adding an industry is a matter of adding one entry in `app/business.py`.
 
 After sign-up, the owner lands in the **setup wizard**, with the bot running live beside it:
 
@@ -215,7 +218,7 @@ So the answer to our supervisor's question, how to set the bot up quickly for a 
 
 ### 5.3 Retrieval
 
-Each `##` section of a business's main text, each of its Q&A pairs, and each topic cut from its uploaded documents becomes one chunk. Chunks are vectorised with TF-IDF over character n-grams of length 3 to 5. Each business has its own index, built when first needed, kept in memory and rebuilt after any change to that business's knowledge. A synonym table expands Roman Urdu and casual words before matching, for example "kist" to "installment financing", "joota" to "shoes" and "cod" to "delivery payment cash". Chunks whose title words appear in the question get a bonus of up to 0.3, ignoring filler words such as "do" and "you". A best score below 0.3 counts as "not confident".
+Each `##` section of a business's main text, each of its Q&A pairs, and each topic cut from its uploaded documents becomes one chunk. Chunks are vectorised with TF-IDF over character n-grams of length 3 to 5. Each business has its own index, built when first needed, kept in memory and rebuilt after any change to that business's knowledge. Synonyms expand Roman Urdu and casual words before matching. A short common list, shared by every business, covers price, hours and contact words such as "qeemat", "kitna" and "timings"; each template adds its own, such as "kist" to "installment financing" for solar, "joota" to "shoes" and "cod" to "delivery payment cash" for shoes, so a word added for one industry cannot change another's matches. Chunks whose title words appear in the question get a bonus of up to 0.3, ignoring filler words such as "do" and "you". A best score below 0.3 counts as "not confident".
 
 ### 5.4 AI providers and the offline bot
 
@@ -226,6 +229,7 @@ The system is built to fail safely:
 - If the main Gemini model is overloaded or out of free quota, lighter models are tried in turn (`gemini-3.5-flash-lite`, then `gemini-flash-lite-latest`). The main model gets 8 seconds before the next one is tried, and a model that fails is skipped for 5 minutes, so during an outage only one visitor waits.
 - If every model fails, the AI is skipped for 60 seconds, so visitors get instant offline replies instead of repeated waits.
 - Gemini requests use IPv4 only, because on the development network the IPv6 route hung for about 10 seconds before failing.
+- If an AI answer is not the JSON that was asked for, it is never shown: the offline bot answers that one message, with no cool-down.
 - The offline bot extracts details with regular expressions, answers from the best-matching chunk, and asks the business's next missing question.
 
 ### 5.5 Lead scoring
@@ -345,7 +349,9 @@ On a real test lead, the rules gave 50 for a visitor with a phone number and a p
 
 [[FIG:retrieval]]
 
-The 0.3 threshold separates the answerable questions from the off-topic ones in this sample, with one exception that the multi-business version introduced. Adding shop words to the shared synonym table ("pay" and "card" now also mean "payment") lets the shoe bot answer "can I pay with card?" from its Payment topic, which scored 0.18 without them and 0.60 with them. On the solar knowledge base, the same words make "can I pay with credit card?" match the Financing topic, which mentions a "down payment", at 0.38. The AI then receives the financing text, which says nothing about cards, so it should say it is not sure; but the question is no longer logged as unanswered. Section 8 lists synonyms per industry as the fix.
+The 0.3 threshold separates the answerable questions from the off-topic ones in this sample. Testing the multi-business version first found an exception. With one synonym table shared by every business, shop words added for the shoe store ("pay" and "card" also meaning "payment") let the shoe bot answer "can I pay with card?" from its Payment topic (0.18 without them, 0.60 with them), but made the solar bot match "can I pay with credit card?" to its Financing topic, which mentions a "down payment", at 0.38. Moving each industry's words into its own template fixed it: the solar score is back to 0.10 while the shoe bot keeps its 0.60.
+
+Each new template was checked the same way, with eight questions its sample text answers and three it does not. After two fixes (clinic words such as "dentist" and "where", and stating that the salon's services are for women only), every answerable question scored above 0.3 and every off-topic one below, for all eight templates.
 
 Before that change, a wider check of 29 answerable and 9 off-topic questions was fully separated: all 29 above 0.3 and all 9 below. One question is a genuine miss: the knowledge base lists only Karachi, Lahore and Islamabad, so "do you install in Multan?" has an implied answer, but it scores below the threshold; one Q&A pair fixes it. Two covered questions, about office timings and net metering, first scored below it; adding synonyms raised both above 0.7, as Figure 3 shows.
 
@@ -385,6 +391,18 @@ These tests answer the supervisor's question directly: a new shoe shop, "Kicks C
 | Home, sign-up, wizard, dashboard and Stride site at 375 px | No sideways scrolling | None on any page |
 | Everything above on PostgreSQL (Neon) | Same results | Seeding, chat, scoring, log-in, leads, settings and deletes all worked |
 
+Each of the five newer templates was then signed up and given a two-message visitor chat with the real AI:
+
+| Template | Visitor asked | Bot's answer | Lead |
+| --- | --- | --- | --- |
+| Clinic | "consultation fee kitni hai?" | In Roman Urdu: general Rs 1,500, specialist Rs 2,500 | Ayesha, dental check-up, hot 76 |
+| Restaurant | Catering for 150 guests on 20 December | Asked for details, then noted guests, date and Rs 2,000 per head | Bilal, catering, hot 88 |
+| Real estate | 5 marla house for sale in Bahria | "From about Rs 1.8 crore", offered current listings | Kamran, 5 marla house, hot 86 |
+| Academy | O Level physics fee, then online classes | Rs 7,000 per subject per month; in Roman Urdu, classes also on Zoom | Sana, O Level physics, hot 82 |
+| Salon | Barat bridal makeup price | From Rs 45,000, with what the package includes | Hira, barat bridal makeup, hot 90 |
+
+Each bot was named after its business ("... Assistant") and showed its industry's stage names.
+
 ### 6.5 Security and robustness tests
 
 | Test | Expected | Result |
@@ -420,6 +438,7 @@ From the multi-business version:
 - Opening a new database connection for every query made each reply about 2.3 seconds slower from a laptop, where one query to the hosted database took 231 ms. The server now keeps one connection open.
 - While Google's main model was overloaded (one test request took 24 seconds just to return "high demand"), every live reply waited 15 seconds before the fallback answered. The 8-second limit and the 5-minute skip brought replies down to 2 to 5 seconds.
 - The live database had been filled from a laptop, so the demo accounts kept the laptop's simple password. Start-up now resets them to the server's own.
+- Once, the AI returned its own working notes ("Answering the user's input based on context and rules...") instead of the JSON reply, and the visitor saw them. Any answer that is not the expected JSON is now discarded and the offline bot answers that message instead, still capturing the visitor's details.
 
 ### 6.7 Limits of this evaluation
 
@@ -446,14 +465,13 @@ The biggest limitation is that the classifier learned from 62 illustrative examp
 | --- | --- |
 | Classifier trained on illustrative, self-labelled data, and shared by all businesses | Retrain on leads owners mark Won or Lost, which are real outcome labels; with enough data, one model per industry |
 | Small scripted test set; no user study | Test with real businesses and their visitors; measure answer accuracy and lead conversion |
-| One synonym table shared by every business, so a word added for one industry can shift another's matches | Synonym lists per template, merged with a small shared list |
 | TF-IDF misses synonyms not in the table | Embedding-based retrieval with a vector store for larger knowledge bases |
 | Offline bot uses only the single best-matching topic | Combine the top matches, or keep the AI for multi-topic questions |
 | One owner login per business; no password reset by email | Staff accounts with roles, and email verification and reset |
 | Lockout keyed on the visitor's address as reported by the proxy, which a client can fake | Also limit failures per account |
 | Logging out deletes the cookie, but a stolen session stays valid until it expires (7 days) | Store sessions on the server so logout ends them everywhere |
 | Free Gemini quota can run out; free-tier content may be used by Google | A paid AI plan for real customer data |
-| Two templates plus a blank one | More industries (clinics, schools, restaurants), written with real businesses |
+| Seven sample templates written by the team | Templates written and checked with real businesses in each industry |
 | Website chat only | WhatsApp and Facebook Messenger channels, which Pakistani customers use heavily |
 
 ## 9 Conclusion
@@ -572,10 +590,10 @@ The answers are written in the team's voice, ready to say aloud. The companion P
 
 **How do you make sure one business can't see another's data?** Every row has a business ID. Every owner request takes the business from the signed session cookie, never from anything the browser sends, and every query filters by it. We tested it directly: each demo owner saw only their own leads, and a chat ID reused on another business's bot was refused.
 
-**What is a template, exactly?** A starting configuration for an industry: a sample knowledge base, the bot's name and greeting, quick replies, how it words its lead questions, product and buying-signal words, and the names of two pipeline stages. The owner then edits any of it in the wizard.
+**What is a template, exactly?** A starting configuration for an industry: a sample knowledge base, the bot's name and greeting, quick replies, how it words its lead questions, product and buying-signal words, its own synonyms, and the names of two pipeline stages. There are eight, including a clinic, a restaurant, a real estate agency, a tuition academy and a salon. The owner then edits any of it in the wizard.
 
 **Why put the chat in an iframe?** Browsers block one website from calling another's API unless the second gives permission (CORS). In an iframe, the chat window is a LeadBot page, so it talks to LeadBot directly and needs no permissions. It also means the shop's own styles cannot break the chat.
 
 **How do you keep the owner's test chats out of the leads?** The preview sends a preview flag, but the server only honours it when the request comes from the logged-in owner of that same business. Those chats are marked as tests, hidden from the leads, and can be deleted with one button.
 
-**Do businesses share anything?** The server, the database, the AI key and its limits, the synonym table and the classifier. Sharing the synonym table had a visible side effect in testing: words added for the shoe shop changed one solar match. Per-industry synonyms and models are our next steps.
+**Do businesses share anything?** The server, the database, the AI key and its limits, a short common synonym list and the classifier. At first all synonyms were shared, and testing showed the side effect: words added for the shoe shop changed one solar match. So each industry now has its own synonyms. One model per industry is the next step for the classifier.

@@ -1,6 +1,6 @@
 # LeadBot: AI Lead Qualification Chatbot (FYP)
 
-A chatbot product for small businesses. A business signs up, picks an industry template (solar installer, shoe store, or start from scratch), teaches the bot its own prices and policies, tests it in a live preview, and pastes one line of code on its website. The bot answers customers only from that business's knowledge, collects their details, scores each lead (hot / warm / cold, with a reason) and puts it on the business's own pipeline.
+A chatbot product for small businesses. A business signs up, picks an industry template (solar installer, shoe store, clinic, restaurant or caterer, real estate agency, school or tuition academy, salon, or start from scratch), teaches the bot its own prices and policies, tests it in a live preview, and pastes one line of code on its website. The bot answers customers only from that business's knowledge, collects their details, scores each lead (hot / warm / cold, with a reason) and puts it on the business's own pipeline.
 
 ## Run it
 
@@ -26,7 +26,7 @@ Demo logins (after `python -m app.seed`): `owner@brightpath.demo` and `owner@str
 
 ## Setting up a bot for a new business (e.g. a shoe shop)
 
-1. **Sign up** at `/signup` with the business name and the closest template. The template gives a working bot straight away: a starting knowledge base (with the business's own name), quick-reply buttons, the questions it asks customers, buying-signal words, and pipeline stage names for that industry (a shoe shop gets *Order confirmed* and *Out for delivery* instead of *Site visit booked* and *Quote sent*).
+1. **Sign up** at `/signup` with the business name and the closest template. The template gives a working bot straight away: a starting knowledge base (with the business's own name), quick-reply buttons, the questions it asks customers, buying-signal words, its own synonyms (Roman Urdu and everyday words), and pipeline stage names for that industry (a shoe shop gets *Order confirmed* and *Out for delivery* instead of *Site visit booked* and *Quote sent*).
 2. **Setup wizard** (`/app/setup`), with the bot running live beside it:
    1. Business name, website and template.
    2. Teach the bot: edit the main text (each `##` heading is one topic), import a web page by URL, or upload a PDF, Word, TXT or Markdown file.
@@ -92,7 +92,7 @@ python report/build_report.py
 
 ```
 app/main.py        API, accounts, pages
-app/business.py    industry templates and per-business bot settings
+app/business.py    industry templates (add one entry to add an industry) and per-business bot settings
 app/auth.py        sign-up/login: password hashing, session cookie, lockout
 app/rag.py         knowledge-base retrieval, one index per business
 app/ingest.py      reads PDF / Word / TXT / MD files and web pages into topics

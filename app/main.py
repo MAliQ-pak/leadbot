@@ -129,6 +129,12 @@ def bot_config(slug: str):
     return business.public_config(_bot(slug))
 
 
+@app.get("/api/templates")
+def templates():
+    """The industry templates offered at sign-up and in the setup wizard."""
+    return [{"key": k, "label": t["label"], "blurb": t.get("blurb", "")} for k, t in business.TEMPLATES.items()]
+
+
 @app.post("/api/chat")
 def chat(body: ChatIn, request: Request):
     biz = _bot(body.bot)
@@ -273,7 +279,8 @@ def me(ctx=Owner):
             "business": {**{k: biz[k] for k in ("id", "slug", "name", "industry", "website", "bot_name", "greeting",
                                                 "color", "setup_done")},
                          "settings": business.settings(biz)},
-            "templates": {k: t["label"] for k, t in business.TEMPLATES.items()}}
+            "templates": {k: t["label"] for k, t in business.TEMPLATES.items()},
+            "template_blurbs": {k: t.get("blurb", "") for k, t in business.TEMPLATES.items()}}
 
 
 @app.put("/api/business")

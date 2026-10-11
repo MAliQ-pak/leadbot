@@ -59,7 +59,7 @@ Small businesses lose customers who visit their website after hours, ask a quest
 
 | Fact | Value |
 | --- | --- |
-| Industry templates | 3: solar installer, shoe store, start from scratch |
+| Industry templates | 8: solar, shoes, clinic, restaurant or caterer, real estate, school or academy, salon, start from scratch |
 | Setup wizard | 5 steps: business, teach, look and greeting, lead questions, install |
 | Demo businesses | BrightPath Solar (17 chats) and Stride Shoes (10 chats) |
 | Classifier accuracy (5-fold cross-validation) | 0.92 on 62 labelled leads (27 qualified, 35 not) |
@@ -243,8 +243,8 @@ Use the Kicks Corner bot just created (its direct link, or the bubble on `my-sho
 
 | File | What to say about it |
 | --- | --- |
-| `app/business.py` | `TEMPLATES`: solar, shoes and blank, each with knowledge text, bot name, greeting, colour, quick replies, lead questions, need and intent words, stage names. `template_kb()` swaps the sample company's name for the new one; `settings()` merges what the owner saved over the template. |
-| `app/rag.py` | `SYNONYMS`, `STOPWORDS` and `CONFIDENT = 0.3` at the top. `KnowledgeBase(business_id)` loads that business's main text, Q&A pairs and documents; `search_scored()` returns the top 3 with scores. `get_kb(id)` keeps one index per business; `reload_kb(id)` rebuilds it after a change. |
+| `app/business.py` | `TEMPLATES`: eight industries, each with knowledge text, bot name, greeting, colour, quick replies, lead questions, need and intent words, its own synonyms, and stage names. `template_kb()` swaps the sample company's name for the new one; `settings()` merges what the owner saved over the template. |
+| `app/rag.py` | `COMMON_SYNONYMS`, `STOPWORDS` and `CONFIDENT = 0.3` at the top. `KnowledgeBase(business_id)` loads that business's main text, Q&A pairs and documents, and merges the common synonyms with its template's own; `search_scored()` returns the top 3 with scores. `get_kb(id)` keeps one index per business; `reload_kb(id)` rebuilds it after a change. |
 | `app/llm.py` | `SYSTEM` is the prompt, filled with the business's name, bot name and questions by `_system()`. `respond()` picks the provider, applies limits and the cool-down, and falls back to `_respond_mock()`. `_gemini_post()` tries each model, with 8 seconds for the main one and a 5-minute rest for a model that failed. |
 | `app/main.py`, function `chat()` | Finds the business, runs retrieval, retries short follow-ups with the previous question, logs unanswered questions and clears the context below 0.3. |
 | `app/ingest.py` | Reads PDF (pypdf), Word (straight from the .docx zip), TXT and Markdown, imports a web page, and splits text into topics. |
@@ -253,7 +253,7 @@ Use the Kicks Corner bot just created (its direct link, or the bubble on `my-sho
 ### 5.5 Cross-questions and answers
 
 **How would you set it up for a completely different industry, like a clinic?**
-Choose "Start from scratch": it gives empty sections (About, Services, Pricing, Hours) to fill in, plus general questions. Or import the clinic's website in step 2. Adding a proper clinic template is a few lines in `business.py`.
+There is a clinic template: doctors' timings, fees, lab tests, appointments, and "Appointment booked" and "Visited" as stages; its sample text says the bot cannot give medical advice. There are also restaurant, real estate, academy and salon templates. For anything else, "Start from scratch" gives empty sections to fill in, or the owner imports their website in step 2. A new template is one entry in `business.py`, and sign-up shows it automatically.
 
 **What exactly is TF-IDF?**
 Each topic becomes a vector of weights, one per character n-gram. A piece counts more when it appears often in that topic and less when it appears in every topic. We compare the question's vector with each topic's using cosine similarity, which is 1 for the same direction and 0 for nothing in common.
@@ -268,7 +268,7 @@ For tens of topics per business, TF-IDF is accurate enough, instant, free, offli
 By measurement: answerable questions scored 0.53 and above, off-topic ones mostly 0.26 and below, so 0.3 sits in the gap. It is a setting, so it can be retuned on real chats.
 
 **Can one business's knowledge leak into another's answers?**
-No: each business has its own index, built only from rows with its business ID. The one thing they share is the synonym table, and testing showed a side effect: adding "pay" and "card" for the shoe shop made "can I pay with credit card?" match the solar company's financing text at 0.38. Synonyms per industry are the fix.
+No: each business has its own index, built only from rows with its business ID. At first they shared one synonym table, and testing caught a side effect: adding "pay" and "card" for the shoe shop made "can I pay with credit card?" match the solar company's financing text at 0.38. We moved each industry's words into its own template, and the solar score went back to 0.10. Only a short list of common price and hours words is shared now.
 
 **Can the AI still make up a price?**
 It is told to answer only from the retrieved text, and when retrieval is not confident it receives no text at all. In every test it quoted only real prices. No prompt is a 100% guarantee, which is why the design keeps the AI's job small.
@@ -290,7 +290,8 @@ On the free tier Google may use the content to improve its products, so we use f
 
 ### 5.6 Weak spots to admit
 
-- **The synonym table is shared by every business and maintained by hand**, so a word added for one industry can shift another's matches.
+- **Synonyms are maintained by hand** for each template; new wording needs a new entry or a Q&A pair.
+- **The sample templates were written by us**, not with real clinics, restaurants or salons.
 - **The threshold was tuned on a small set** of our own questions.
 - **The offline bot uses only the best-matching topic**, so it can give a partial answer to a two-topic question.
 - **Indexes live in memory** and are rebuilt for each business after a restart (fast at this size).

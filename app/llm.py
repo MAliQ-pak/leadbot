@@ -95,6 +95,10 @@ def _within_hourly_budget():
     return len(_recent_calls) < int(os.getenv("LLM_HOURLY_LIMIT", "200"))
 
 
+class BadOutput(Exception):
+    """The AI answered, but not in the JSON shape we asked for (it once returned its own notes)."""
+
+
 def respond(history, context_chunks, known_lead, biz, allow_llm=True):
     """history: list of {role, content}; biz: {"name", "bot_name", "settings"}. Returns (reply, lead_updates).
     allow_llm=False (chat over its message limit) always uses the offline bot."""
@@ -107,6 +111,8 @@ def respond(history, context_chunks, known_lead, biz, allow_llm=True):
             result = fn(history, context_chunks, known_lead, biz)
             LAST_ERROR = None
             return result
+        except BadOutput as e:  # the AI is fine; only this answer is unusable, so no cool-down
+            print(f"{p} gave an unusable answer, offline bot answers this message:", e)
         except Exception as e:  # any API problem: keep the chat working with the offline bot
             LAST_ERROR = {"message": str(e)[:300], "time": time.time()}
             _cooldown_until = time.time() + int(os.getenv("LLM_COOLDOWN", "60"))
@@ -185,7 +191,10 @@ def _respond_gemini(history, context_chunks, known_lead, biz):
     text = "".join(p.get("text", "") for p in parts if not p.get("thought"))  # skip thinking summaries
     if not text.strip():
         raise RuntimeError("Gemini returned an empty answer (finish reason: %s)" % candidates[0].get("finishReason"))
-    return _parse_reply(text)
+    data = _extract_json(text)
+    if not isinstance(data, dict) or not str(data.get("reply") or "").strip():
+        raise BadOutput(text[:120])  # never show the visitor raw model output
+    return str(data["reply"]), _clean_lead(data.get("lead"))
 
 
 _gemini_client = None

@@ -12,85 +12,34 @@ from sklearn.metrics.pairwise import cosine_similarity
 KB_DIR = Path(__file__).resolve().parent.parent / "kb"
 
 # Common Roman Urdu / English intent words mapped to KB vocabulary so queries match.
-SYNONYMS = {
+# Words every business shares: Roman Urdu and casual price, hours and contact words. Each industry
+# template adds its own (app/business.py), so a word added for shoes cannot shift a solar match.
+COMMON_SYNONYMS = {
     "qeemat": "price pricing cost",
     "keemat": "price pricing cost",
     "kitna": "price cost how much",
     "kitne": "price cost how much",
     "rate": "price pricing",
     "daam": "price cost",
-    "kist": "installment financing",
-    "qist": "installment financing",
-    "installments": "installment financing",
-    "guarantee": "warranty",
-    "waranty": "warranty",
-    "time": "installation time duration",
-    "kitna time": "installation time duration",
-    "kab": "installation time",
-    "visit": "site visit",
     "timing": "working hours contact",
     "timings": "working hours contact",
     "hours": "working hours contact",
-    "net metering": "services net metering paperwork",
     "cost": "price pricing",
     "how much": "price pricing",
     "expensive": "price pricing",
     "cheap": "price pricing",
-    "emi": "installment financing",
     "open": "working hours contact",
     "sunday": "working hours contact",
-    "loan": "installment financing",
-    "installation": "installation time",
-    "how long": "installation time duration",
-    "where": "areas karachi lahore islamabad",
     "contact": "working hours contact",
     "call": "working hours contact",
-    # words the website uses that the knowledge base doesn't ("Packages", "Starting prices")
     "package": "pricing price",
     "packages": "pricing price",
     "price": "pricing",
     "prices": "pricing price",
     "rates": "pricing price",
-    "price list": "pricing price maintenance",
-    "plans": "pricing price financing",
-    "offer": "services pricing",
-    "options": "services pricing",
-    "products": "services pricing",
-    "which system": "pricing services",
-    "on grid": "pricing on-grid",
-    "on-grid": "pricing",
-    "hybrid": "pricing services battery",
-    "battery": "services battery backup pricing",
-    "backup": "services battery backup pricing",
-    "load shedding": "services battery backup",
-    "areas": "about karachi lahore islamabad",
-    "cities": "about karachi lahore islamabad",
-    "city": "about karachi lahore islamabad",
-    "serve": "about karachi lahore islamabad",
-    "located": "about karachi lahore islamabad",
     "company": "about",
     "who are you": "about",
     "batao": "price pricing",
-    # general shop words (a shoe store, clothing, retail)
-    "delivery": "delivery",
-    "shipping": "delivery",
-    "deliver": "delivery",
-    "cod": "delivery payment cash",
-    "cash on delivery": "delivery payment",
-    "return": "returns exchange",
-    "returns": "returns exchange",
-    "exchange": "returns exchange",
-    "refund": "returns exchange",
-    "size": "sizes",
-    "sizes": "sizes",
-    "joota": "products shoes",
-    "joote": "products shoes",
-    "shoes": "products",
-    "jazzcash": "payment",
-    "easypaisa": "payment",
-    "card": "payment",
-    "pay": "payment",
-    "bulk": "bulk orders",
 }
 
 
@@ -128,6 +77,8 @@ class KnowledgeBase:
     def _load(self):
         from . import db, ingest  # imported here to avoid a circular import at startup
         biz = db.get_business(self.business_id) or {}
+        from .business import template
+        self.synonyms = {**COMMON_SYNONYMS, **template(biz.get("industry") or "blank").get("synonyms", {})}
         section, body = "", []
         for line in (biz.get("kb_text") or "").splitlines():  # the main text: each "## " heading is one topic
             if line.startswith("# "):
@@ -151,7 +102,7 @@ class KnowledgeBase:
 
     def _expand(self, query):
         q = query.lower()
-        extra = [v for k, v in SYNONYMS.items() if re.search(rf"\b{re.escape(k)}\b", q)]
+        extra = [v for k, v in self.synonyms.items() if re.search(rf"\b{re.escape(k)}\b", q)]
         return q + " " + " ".join(extra)
 
     def search_scored(self, query, k=3):

@@ -166,7 +166,7 @@ QUESTIONS = [  # (question, covered by the knowledge base?, note)
     ("5kw ki qeemat kitni hai? (Roman Urdu)", True, ""),
     ("do you have jobs?", False, ""), ("do you install in Multan?", False, "missed: the city list implies no"),
     ("is there a discount for students?", False, ""), ("what brand of inverter do you use?", False, ""),
-    ("are panels made in china?", False, ""), ("can I pay with credit card?", False, "shoe-shop synonym: 'pay' finds 'down payment'"),
+    ("are panels made in china?", False, ""), ("can I pay with credit card?", False, ""),
     ("do you sell generators?", False, ""),
 ]
 
