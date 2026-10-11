@@ -201,28 +201,40 @@ def _gemini_http():
     return _gemini_client
 
 
+_model_down_until = {}  # model -> time; a model that just failed is skipped for a while
+MODEL_REST = 300           # seconds
+
+
 def _gemini_post(body):
     """Send the request to GEMINI_MODEL; if it is overloaded (503), out of free quota (429) or too slow,
-    try the lighter GEMINI_FALLBACK_MODEL before giving up (then the offline bot answers)."""
+    try the lighter GEMINI_FALLBACK_MODEL before giving up (then the offline bot answers).
+    A model that fails is skipped for MODEL_REST seconds, so only one visitor waits for it."""
     import httpx
     # GEMINI_FALLBACK_MODEL may list several models, comma-separated, tried in order
     models = [os.getenv("GEMINI_MODEL", "gemini-3.8-flash")] + \
         os.getenv("GEMINI_FALLBACK_MODEL", "gemini-3.5-flash-lite,gemini-flash-lite-latest").split(",")
     headers = {"x-goog-api-key": os.getenv("GEMINI_API_KEY", "").strip()}
     problem = "no model available"
-    for model in dict.fromkeys(m.strip() for m in models if m.strip()):  # unique, in order
+    models = list(dict.fromkeys(m.strip() for m in models if m.strip()))  # unique, in order
+    resting = [m for m in models if _model_down_until.get(m, 0) > time.time()]
+    if len(resting) < len(models):
+        models = [m for m in models if m not in resting]  # all resting: try them all anyway
+    for i, model in enumerate(models):
+        wait = 8 if i < len(models) - 1 else 15  # don't let a struggling model hold up the fallback
         for attempt in range(2):  # one retry if the connection drops before Google answers
             try:
-                r = _gemini_http().post(GEMINI_URL.format(model=model), headers=headers, json=body, timeout=15)
+                r = _gemini_http().post(GEMINI_URL.format(model=model), headers=headers, json=body, timeout=wait)
                 break
             except (httpx.ConnectError, httpx.RemoteProtocolError) as e:
                 problem, r = f"{model}: connection failed ({e})", None
             except httpx.TimeoutException:
-                problem, r = f"{model}: no answer within 15 seconds", None
+                problem, r = f"{model}: no answer within {wait} seconds", None
                 break
         if r is None:
+            _model_down_until[model] = time.time() + MODEL_REST
             continue
         if r.status_code == 200:
+            _model_down_until.pop(model, None)
             return r.json()
         try:
             detail = r.json()["error"]["message"]
@@ -231,6 +243,7 @@ def _gemini_post(body):
         problem = f"Gemini error {r.status_code} ({model}): {detail[:200]}"
         if r.status_code not in (429, 500, 503):  # e.g. bad key: a second model won't help
             break
+        _model_down_until[model] = time.time() + MODEL_REST
     raise RuntimeError(problem)
 
 

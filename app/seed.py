@@ -324,6 +324,13 @@ def seed_if_empty():
     if not db.rows("SELECT 1 AS x FROM users LIMIT 1"):
         n = seed()
         print(f"Demo data: 2 businesses with {n} leads added (SEED_DEMO=true).")
+    elif os.getenv("DEMO_PASSWORD"):
+        # data seeded elsewhere (e.g. from a laptop) keeps the laptop password; use the server's instead
+        for _slug, _name, _tpl, email, _owner, _data in DEMO:
+            user = db.user_by_email(email)
+            if user and not auth.check_password(os.getenv("DEMO_PASSWORD"), user["password_hash"]):
+                db.execute("UPDATE users SET password_hash=? WHERE id=?",
+                           (auth.hash_password(os.getenv("DEMO_PASSWORD")), user["id"]))
 
 
 if __name__ == "__main__":
