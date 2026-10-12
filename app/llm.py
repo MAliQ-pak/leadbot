@@ -289,6 +289,31 @@ def _shorten(text, limit=300):
     return out or text[:limit].rsplit(" ", 1)[0] + "..."
 
 
+def _asked_field(bot_message, questions):
+    """Which lead question the bot's last message ended with (need, name, phone, budget, timeline), if any."""
+    for field in ASK_FIELDS:
+        q = (questions.get(field) or "").strip()
+        if q and q in bot_message:
+            return field
+    return None
+
+
+def _as_answer(field, text):
+    """Take a short reply as the asked-for detail; None if it does not look like one."""
+    text = text.strip().strip(".!")
+    if not text or len(text) > 120:
+        return None
+    if field == "name":
+        words = text.split()
+        return text.title() if 1 <= len(words) <= 3 and all(w.isalpha() for w in words) else None
+    if field == "phone":
+        m = PHONE.search(text)
+        return re.sub(r"\s+", "", m.group(1)) if m else None
+    if field == "budget":
+        return text if re.search(r"\d", text) else None
+    return text  # need or timeline: the visitor's own words
+
+
 def _respond_mock(history, context_chunks, known_lead, biz):
     user_msgs = [m["content"] for m in history if m["role"] == "user"]
     last = user_msgs[-1] if user_msgs else ""
@@ -308,6 +333,15 @@ def _respond_mock(history, context_chunks, known_lead, biz):
     if need and (m := need.search(full)):
         lead["need"] = m.group(1).strip()
 
+    # A reply to the question the bot just asked is that detail, even in words no pattern knows:
+    # "Which shoes are you looking for?" -> "simple office wear, EU 44" is the need.
+    bot_msgs = [m["content"] for m in history if m["role"] == "assistant"]
+    asked = _asked_field(bot_msgs[-1] if bot_msgs else "", biz['settings']['questions'])
+    if asked and last and not QUESTION.search(last) and not lead.get(asked) and not known_lead.get(asked):
+        value = _as_answer(asked, last)
+        if value:
+            lead[asked] = value
+
     merged = {**known_lead, **lead}
     new_fields = [k for k in LEAD_FIELDS if lead.get(k) and known_lead.get(k) != lead[k]]
     if new_fields and not QUESTION.search(last):
@@ -318,9 +352,12 @@ def _respond_mock(history, context_chunks, known_lead, biz):
         reply = f"Thanks{', ' + name if name else ''}! I've noted your {noted}."
     elif GREETING.match(last):
         reply = "Wa alaikum assalam! Happy to help." if re.search(r"salam", last, re.I) else "Hello! Happy to help."
-    elif context_chunks:
-        answer = context_chunks[0].split(": ", 1)[-1]
-        reply = _shorten(answer)
+    elif context_chunks and QUESTION.search(last):
+        answer = _shorten(context_chunks[0].split(": ", 1)[-1])
+        # never send the same paragraph twice in a row
+        reply = "As I mentioned, " + answer[0].lower() + answer[1:] if bot_msgs and answer in bot_msgs[-1] else answer
+    elif not QUESTION.search(last):
+        reply = "Got it."  # a statement, not a question: no knowledge-base quote
     else:
         reply = "I'm not sure about that one, but a human advisor can help."
     questions = biz['settings']['questions']

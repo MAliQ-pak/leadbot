@@ -94,7 +94,7 @@ pip install -r requirements-dev.txt
 python -m pytest
 ```
 
-114 tests in `tests/` (about ten seconds): scoring, retrieval for every template, the website crawler's safety checks, passwords and sessions, and the API, including that no business can read, change or delete another's data. They use a throwaway SQLite file, the offline bot and a fake website, so they need no internet, AI key or database server, and never touch `leadbot.db` or the live database. GitHub runs them on every push (`.github/workflows/tests.yml`).
+117 tests in `tests/` (about ten seconds): scoring, retrieval for every template, the website crawler's safety checks, passwords and sessions, and the API, including that no business can read, change or delete another's data. They use a throwaway SQLite file, the offline bot and a fake website, so they need no internet, AI key or database server, and never touch `leadbot.db` or the live database. GitHub runs them on every push (`.github/workflows/tests.yml`).
 
 ## Project report
 

@@ -451,7 +451,7 @@ The website importer was tested on a small test site built for the purpose and o
 
 ### 6.6 Automated tests
 
-All of the checks above that can run without a person were turned into an automated test suite: 114 pytest tests in the `tests/` folder, which run in about ten seconds with `python -m pytest`. GitHub runs them on every push (`.github/workflows/tests.yml`), so a change that breaks something is caught before it reaches the live site. The suite needs no internet, AI key or database server: it uses a throwaway SQLite file, the offline bot, and a fake website for the crawler.
+All of the checks above that can run without a person were turned into an automated test suite: 117 pytest tests in the `tests/` folder, which run in about ten seconds with `python -m pytest`. GitHub runs them on every push (`.github/workflows/tests.yml`), so a change that breaks something is caught before it reaches the live site. The suite needs no internet, AI key or database server: it uses a throwaway SQLite file, the offline bot, and a fake website for the crawler.
 
 | File | Tests | What they protect |
 | --- | --- | --- |
@@ -460,6 +460,7 @@ All of the checks above that can run without a person were turned into an automa
 | `test_ingest.py` | 14 | Private addresses (`localhost`, `10.x`, `192.168.x`, the cloud metadata address) are refused; the crawler follows links and the sitemap, obeys `robots.txt`, stays in scope, merges `/index.html`, keeps repeated text once and stops at its page limit |
 | `test_auth.py` | 5 | Passwords are salted hashes; a forged session cookie is rejected; log-in and log-out; five failures lock the address; a used email cannot sign up again |
 | `test_agency.py` | 11 | Only super admins reach the agency routes; the overview lists every business; support view opens the chosen business, is logged in its audit log and ends on exit; a support-view cookie issued to someone else is useless; suspend stops the bot, new log-ins and open sessions, and reactivate restores them; delete needs the exact name and removes every row |
+| `test_offline_bot.py` | 3 | The offline bot takes a reply to its own question as that detail (even in words no pattern knows), moves on instead of repeating itself, and never sends the same paragraph twice in a row |
 | `test_api.py` | 18 | Public pages are open and owner pages locked; a visitor chat becomes a scored lead; preview chats are not leads, and a visitor cannot fake the preview flag; one business cannot read, change or delete another's leads or see its knowledge base; a chat ID cannot move between businesses; unanswered questions are logged; an unusable AI answer falls back to the offline bot; a WhatsApp click is logged, and only for the lead's own business; the CSV export has the right columns, the owner's timezone and formula protection; pages are always re-checked after an update |
 
 To check that the tests really catch faults, the private-address check was deliberately removed: all five of its tests failed, and passed again once it was restored. Writing the suite also found one more defect: deleting another business's lead (with its chat ID) changed nothing but still answered "OK" and wrote a "Lead deleted" line in the caller's audit log. It now answers "not found".
@@ -485,6 +486,7 @@ From the multi-business version:
 - The live database had been filled from a laptop, so the demo accounts kept the laptop's simple password. Start-up now resets them to the server's own.
 - The first crawl of a real website fetched its home page twice, as `/` and `/index.html`. Both now count as one address, and a page whose text matches one already imported is skipped.
 - The dashboard page itself was not marked to be re-checked, so after an update a browser could show the old page with the new script, and a new button was missing. Every page is now re-checked on each load, like the scripts.
+- During a Google outage, all three Gemini models failed and the offline bot took over, as designed. But it asked "Which shoes are you looking for?", the visitor answered "simple office wear, EU 44", and it repeated the sizes paragraph and the same question, because "office wear" was in no word list. The offline bot now takes a reply to its own question as that detail, answers a statement with an acknowledgement instead of a knowledge-base quote, and never repeats the paragraph it just sent. Replayed with no AI at all, the same visitor now gives a complete hot lead.
 - Once, the AI returned its own working notes ("Answering the user's input based on context and rules...") instead of the JSON reply, and the visitor saw them. Any answer that is not the expected JSON is now discarded and the offline bot answers that message instead, still capturing the visitor's details.
 
 ### 6.8 Limits of this evaluation
@@ -621,7 +623,7 @@ The answers are written in the team's voice, ready to say aloud. The companion P
 
 ### A.8 Testing and deployment
 
-**How did you test the system?** Cross-validation for the classifier, retrieval scores for covered and uncovered questions, scripted conversations against the real AI, setting up a new shoe shop end to end, and direct requests to check every owner route was locked and separated. The repeatable checks are 114 automated tests that GitHub runs on every push. Testing found real defects, such as long chats silently falling back to the offline bot, and a template that named the wrong shop.
+**How did you test the system?** Cross-validation for the classifier, retrieval scores for covered and uncovered questions, scripted conversations against the real AI, setting up a new shoe shop end to end, and direct requests to check every owner route was locked and separated. The repeatable checks are 117 automated tests that GitHub runs on every push. Testing found real defects, such as long chats silently falling back to the offline bot, and a template that named the wrong shop.
 
 **Does the live site still lose its data on restart?** Not any more. The first version stored everything in a file on Render's free disk, which is wiped on every restart. Now the live site uses a hosted PostgreSQL database, so sign-ups and leads survive restarts and redeploys.
 
