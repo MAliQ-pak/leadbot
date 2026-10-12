@@ -69,7 +69,7 @@ function logWhatsApp(sid) {  // the audit log records that the owner reached out
 
 async function api(path, opts) {
   const r = await fetch(path, opts);
-  if (r.status === 401) { location.href = "/login"; throw new Error("401"); }  // session expired
+  if (r.status === 401 || r.status === 403) { location.href = "/login"; throw new Error(r.status); }  // expired or paused
   if (!r.ok) throw new Error(r.status);
   return r.json();
 }
@@ -266,12 +266,21 @@ $("d-delete").onclick = deleteLead;
 api("/api/health").then(h => {
   $("mode").textContent = "Bot mode: " + (MODE_LABEL[h.mode] || h.mode);
 }).catch(() => {});
+$("support-exit").onclick = async () => {
+  const r = await fetch("/api/agency/view-exit", { method: "POST" });
+  location.href = r.ok ? "/agency" : "/app";
+};
 $("logout").onclick = async () => { await fetch("/api/auth/logout", { method: "POST" }); location.href = "/login"; };
 
 // who is logged in decides the business name, its stage names and its demo website link
 api("/api/me").then(me => {
   ME = me;
   STATUS_LABEL = me.business.settings.stage_names;
+  $("agency-link").hidden = !me.agency;
+  if (me.support) {  // a super admin looking at this business from the agency view
+    $("support-biz").textContent = me.business.name;
+    $("support-bar").hidden = false;
+  }
   $("biz").textContent = me.business.name;
   $("user").textContent = me.user.email;
   const demos = ["brightpath-solar", "stride-shoes"];

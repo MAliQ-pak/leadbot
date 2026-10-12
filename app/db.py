@@ -122,6 +122,7 @@ def init():
             c.run("CREATE TABLE IF NOT EXISTS " + t)
         # columns added after the first version; ALTER so existing databases keep working
         added = {
+            "businesses": ["status TEXT DEFAULT 'active'"],  # active | suspended (by the agency)
             "leads": ["rule_score INTEGER", "ml_score INTEGER", "status TEXT DEFAULT 'new'", "notes TEXT DEFAULT ''",
                       f"created {num}", "business_id INTEGER", "is_test INTEGER DEFAULT 0"],
             "messages": ["business_id INTEGER"], "kb_faq": ["business_id INTEGER"], "kb_docs": ["business_id INTEGER"],
@@ -149,7 +150,8 @@ def adopt_orphans(business_id):
 
 
 # ---------- businesses and users ----------
-BUSINESS_FIELDS = ["name", "industry", "website", "bot_name", "greeting", "color", "settings", "kb_text", "setup_done"]
+BUSINESS_FIELDS = ["name", "industry", "website", "bot_name", "greeting", "color", "settings", "kb_text", "setup_done",
+                   "status"]
 
 
 def create_business(slug, **fields):
@@ -262,6 +264,34 @@ def delete_test_leads(business_id):
     """Chats from the live preview are marked is_test; this clears them."""
     for sid in [r["session_id"] for r in rows("SELECT session_id FROM leads WHERE business_id=? AND is_test=1", (business_id,))]:
         delete_lead(business_id, sid)
+
+
+# ---------- the agency (super admin) view across all businesses ----------
+def business_summaries(since):
+    """One row per business with its owner and lead counts; since = start of "today" for chat counts."""
+    return rows(
+        """SELECT b.id, b.slug, b.name, b.industry, b.created, b.setup_done, COALESCE(b.status, 'active') AS status,
+             (SELECT u.email FROM users u WHERE u.business_id=b.id ORDER BY u.id LIMIT 1) AS owner,
+             (SELECT COUNT(*) FROM leads l WHERE l.business_id=b.id AND COALESCE(l.is_test, 0)=0) AS leads,
+             (SELECT COUNT(*) FROM leads l WHERE l.business_id=b.id AND COALESCE(l.is_test, 0)=0 AND l.tier='hot'
+                AND COALESCE(l.status, 'new') NOT IN ('won', 'lost')) AS hot,
+             (SELECT COUNT(*) FROM leads l WHERE l.business_id=b.id AND COALESCE(l.is_test, 0)=0 AND l.status='won') AS won,
+             (SELECT COUNT(*) FROM messages m WHERE m.business_id=b.id AND m.role='user' AND m.created>=?) AS chats_today,
+             (SELECT MAX(m.created) FROM messages m WHERE m.business_id=b.id) AS last_activity
+           FROM businesses b ORDER BY b.id""", (since,))
+
+
+def audit_all(limit=60):
+    """Recent events across every business (and agency actions, which have no business), newest first."""
+    return rows("""SELECT a.*, b.name AS business FROM audit a LEFT JOIN businesses b ON b.id=a.business_id
+                   ORDER BY a.id DESC LIMIT ?""", (limit,))
+
+
+def delete_business(business_id):
+    """Remove a business and everything it owns: chats, leads, knowledge, its audit log and its accounts."""
+    for table in ("messages", "leads", "kb_faq", "kb_docs", "unanswered", "audit", "users"):
+        execute(f"DELETE FROM {table} WHERE business_id=?", (business_id,))
+    execute("DELETE FROM businesses WHERE id=?", (business_id,))
 
 
 # ---------- audit log ----------

@@ -5,6 +5,9 @@
   scripts and is not sent with requests that other websites start.
 - 5 failed logins from one address within 15 minutes lock that address out for 15 minutes.
 - Every admin request is scoped to the logged-in user's own business.
+- Super admins (the agency running LeadBot, listed in SUPER_ADMINS) see every business on /agency and can
+  open any business's dashboard in "support view": a second signed cookie names the business, and it is
+  only honoured for the super admin it was issued to.
 """
 import hashlib
 import hmac
@@ -18,6 +21,8 @@ from fastapi import HTTPException, Request
 from . import db
 
 COOKIE = "lb_session"
+VIEW_COOKIE = "lb_view"  # support view: which business a super admin is looking at
+DEMO_AGENCY = "agency@leadbot.demo"
 SESSION_DAYS = 7
 ITERATIONS = 240_000
 _KEY_FILE = Path(__file__).resolve().parent.parent / ".secret_key"
@@ -91,15 +96,71 @@ def record_failure(request):
     _fails.setdefault(client_ip(request), []).append(time.time())
 
 
+# ---------- super admins (the agency) ----------
+def super_admins():
+    """Emails in SUPER_ADMINS (comma-separated). On a laptop with none set, the demo agency account."""
+    raw = os.getenv("SUPER_ADMINS", "").strip()
+    if not raw and not os.getenv("RENDER"):
+        raw = DEMO_AGENCY
+    return {e.strip().lower() for e in raw.split(",") if e.strip()}
+
+
+def is_super(user):
+    return bool(user) and user["email"].lower() in super_admins()
+
+
+def make_view(user_id, business_id):
+    expires = int(time.time()) + 8 * 3600  # a support visit lasts a working day at most
+    body = f"{user_id}.{business_id}.{expires}"
+    return f"{body}.{hmac.new(_secret(), body.encode(), hashlib.sha256).hexdigest()}"
+
+
+def read_view(token, user_id):
+    """The business id in a support-view cookie, if it was issued to this user and has not expired."""
+    try:
+        uid, bid, expires, sig = (token or "").split(".")
+        good = hmac.new(_secret(), f"{uid}.{bid}.{expires}".encode(), hashlib.sha256).hexdigest()
+        if hmac.compare_digest(sig, good) and int(uid) == user_id and int(expires) > time.time():
+            return int(bid)
+    except ValueError:
+        pass
+    return None
+
+
+def logged_in_user(request):
+    user_id = read_session(request.cookies.get(COOKIE))
+    return db.get_user(user_id) if user_id else None
+
+
+def agency(request: Request):
+    """FastAPI dependency for /api/agency routes: the logged-in super admin, else 401/403."""
+    user = logged_in_user(request)
+    if not user:
+        raise HTTPException(401, "Please log in.")
+    if not is_super(user):
+        raise HTTPException(403, "Only the LeadBot agency can open this page.")
+    return user
+
+
 # ---------- who is asking ----------
 def current(request: Request):
-    """FastAPI dependency for admin routes: {"user", "biz"} of the logged-in owner, else 401."""
-    user_id = read_session(request.cookies.get(COOKIE))
-    user = db.get_user(user_id) if user_id else None
-    biz = db.get_business(user["business_id"]) if user else None
-    if not user or not biz:
+    """FastAPI dependency for admin routes: {"user", "biz", "support"} of the logged-in owner, else 401.
+    A super admin in support view gets the business they chose (support=True); a suspended business's
+    own owner is refused."""
+    user = logged_in_user(request)
+    if not user:
         raise HTTPException(401, "Please log in.")
-    return {"user": user, "biz": biz}
+    if is_super(user):
+        viewing = read_view(request.cookies.get(VIEW_COOKIE), user["id"])
+        biz = db.get_business(viewing) if viewing else None
+        if biz:
+            return {"user": user, "biz": biz, "support": True}
+    biz = db.get_business(user["business_id"]) if user["business_id"] else None
+    if not biz:
+        raise HTTPException(401, "Please log in.")
+    if (biz.get("status") or "active") == "suspended" and not is_super(user):
+        raise HTTPException(403, "This account is paused. Please contact LeadBot support.")
+    return {"user": user, "biz": biz, "support": False}
 
 
 def current_or_none(request):

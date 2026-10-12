@@ -34,6 +34,9 @@ services:
       # Password of the two demo owner accounts (owner@brightpath.demo, owner@stride.demo)
       - key: DEMO_PASSWORD
         sync: false
+      # Emails (comma-separated) with the agency view of every business at /agency, e.g. agency@leadbot.demo
+      - key: SUPER_ADMINS
+        sync: false
       - key: SEED_DEMO
         value: "true"
       - key: LLM_HOURLY_LIMIT

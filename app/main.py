@@ -124,6 +124,8 @@ def _bot(slug):
     biz = db.business_by_slug(slug or "")
     if not biz:
         raise HTTPException(404, "No such bot.")
+    if (biz.get("status") or "active") == "suspended":  # paused by the agency
+        raise HTTPException(403, "This chat is not available right now.")
     return biz
 
 
@@ -264,10 +266,14 @@ def login(body: LoginIn, request: Request):
         if user:
             db.audit(user["business_id"], "auth", "Failed login", f"from {auth.client_ip(request)}", actor="unknown")
         raise HTTPException(401, "Wrong email or password.")
-    biz = db.get_business(user["business_id"])
-    db.audit(biz["id"], "auth", "Logged in", f"from {auth.client_ip(request)}", actor=user["email"])
-    response = JSONResponse({"ok": True, "next": "/app" if biz["setup_done"] else "/app/setup"})
+    biz = db.get_business(user["business_id"]) if user["business_id"] else None
+    if biz and (biz.get("status") or "active") == "suspended" and not auth.is_super(user):
+        raise HTTPException(403, "This account is paused. Please contact LeadBot support.")
+    db.audit(biz["id"] if biz else None, "auth", "Logged in", f"from {auth.client_ip(request)}", actor=user["email"])
+    nxt = "/agency" if auth.is_super(user) else "/app" if biz["setup_done"] else "/app/setup"
+    response = JSONResponse({"ok": True, "next": nxt})
     auth.set_cookie(response, request, user["id"])
+    response.delete_cookie(auth.VIEW_COOKIE)  # every log-in starts outside support view
     return response
 
 
@@ -275,6 +281,7 @@ def login(body: LoginIn, request: Request):
 def logout():
     response = JSONResponse({"ok": True})
     response.delete_cookie(auth.COOKIE)
+    response.delete_cookie(auth.VIEW_COOKIE)
     return response
 
 
@@ -283,6 +290,7 @@ def logout():
 def me(ctx=Owner):
     biz, user = ctx["biz"], ctx["user"]
     return {"user": {"name": user["name"], "email": user["email"]},
+            "agency": auth.is_super(user), "support": bool(ctx.get("support")),
             "business": {**{k: biz[k] for k in ("id", "slug", "name", "industry", "website", "bot_name", "greeting",
                                                 "color", "setup_done")},
                          "settings": business.settings(biz)},
@@ -608,11 +616,96 @@ def login_page():
     return _page("auth.html")
 
 
+# ---------- the agency: every business at once (super admins only) ----------
+Agency = Depends(auth.agency)
+
+
+class StatusIn(BaseModel):
+    status: str = Field(pattern="^(active|suspended)$")
+
+
+class ConfirmIn(BaseModel):
+    confirm: str = Field(max_length=120)  # the business's name, typed by the super admin
+
+
+def _agency_business(bid):
+    biz = db.get_business(bid)
+    if not biz:
+        raise HTTPException(404, "No such business.")
+    return biz
+
+
+@app.get("/api/agency/overview")
+def agency_overview(user=Agency):
+    day = datetime.now(timezone(timedelta(hours=5))).replace(hour=0, minute=0, second=0, microsecond=0)  # Pakistan
+    rows = db.business_summaries(day.timestamp())
+    totals = {k: sum(r[k] or 0 for r in rows) for k in ("leads", "hot", "won", "chats_today")}
+    totals.update(businesses=len(rows), suspended=sum(r["status"] == "suspended" for r in rows))
+    return {"you": user["email"], "totals": totals, "businesses": rows,
+            "ai": {"mode": llm.provider(), "error": llm.LAST_ERROR}}
+
+
+@app.get("/api/agency/activity")
+def agency_activity(user=Agency):
+    return db.audit_all()
+
+
+@app.post("/api/agency/view/{bid}")
+def agency_view(bid: int, request: Request, user=Agency):
+    """Open a business's dashboard as its owner sees it ("support view"). Logged in that business's audit."""
+    biz = _agency_business(bid)
+    db.audit(bid, "auth", "Agency support view opened", f"by {user['email']}", actor=user["email"])
+    response = JSONResponse({"ok": True, "next": "/app" if biz["setup_done"] else "/app/setup"})
+    response.set_cookie(auth.VIEW_COOKIE, auth.make_view(user["id"], bid), max_age=8 * 3600, httponly=True,
+                        samesite="lax", secure=request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https")
+    return response
+
+
+@app.post("/api/agency/view-exit")
+def agency_view_exit(user=Agency):
+    response = JSONResponse({"ok": True, "next": "/agency"})
+    response.delete_cookie(auth.VIEW_COOKIE)
+    return response
+
+
+@app.post("/api/agency/businesses/{bid}/status")
+def agency_set_status(bid: int, body: StatusIn, user=Agency):
+    """Suspend: the bot stops answering and the owner cannot log in. Reactivate undoes it. Nothing is deleted."""
+    biz = _agency_business(bid)
+    db.update_business(bid, status=body.status)
+    action = "Business suspended by the agency" if body.status == "suspended" else "Business reactivated by the agency"
+    db.audit(bid, "system", action, biz["name"], actor=user["email"])
+    return {"ok": True, "status": body.status}
+
+
+@app.delete("/api/agency/businesses/{bid}")
+def agency_delete(bid: int, body: ConfirmIn, user=Agency):
+    """Permanently delete a business and all its data. The exact business name must be typed to confirm."""
+    biz = _agency_business(bid)
+    if body.confirm.strip() != biz["name"]:
+        raise HTTPException(400, "Type the business name exactly to confirm.")
+    if user["business_id"] == bid:
+        raise HTTPException(400, "You cannot delete the business your own account belongs to.")
+    db.delete_business(bid)
+    rag._kbs.pop(bid, None)  # forget its search index
+    db.audit(None, "system", "Business deleted by the agency", f"{biz['name']} ({biz['slug']})", actor=user["email"])
+    return {"ok": True}
+
+
+@app.get("/agency")
+def agency_page(request: Request):
+    user = auth.logged_in_user(request)
+    if not user:
+        return RedirectResponse("/login")
+    return _page("agency.html") if auth.is_super(user) else RedirectResponse("/app")
+
+
 @app.get("/app")
 def admin_page(request: Request):
     ctx = auth.current_or_none(request)
     if not ctx:
-        return RedirectResponse("/login")
+        user = auth.logged_in_user(request)  # an agency account with no business of its own
+        return RedirectResponse("/agency" if auth.is_super(user) else "/login")
     return _page("admin.html") if ctx["biz"]["setup_done"] else RedirectResponse("/app/setup")
 
 

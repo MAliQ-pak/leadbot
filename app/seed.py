@@ -304,9 +304,17 @@ def _seed_business(bid, owner_email, data):
     return len(leads) + len(anonymous)
 
 
+def ensure_agency(password):
+    """The demo agency (super admin) account: no business of its own, it sees all of them on /agency.
+    It only has agency powers if its email is in SUPER_ADMINS (on a laptop, it is by default)."""
+    if not db.user_by_email(auth.DEMO_AGENCY):
+        db.create_user(auth.DEMO_AGENCY, auth.hash_password(password), "LeadBot Agency", None)
+
+
 def seed():
     from . import rag
     password = demo_password()
+    ensure_agency(password)
     total = 0
     for slug, name, industry, email, owner, data in DEMO:
         biz = db.business_by_slug(slug)
@@ -324,9 +332,11 @@ def seed_if_empty():
     if not db.rows("SELECT 1 AS x FROM users LIMIT 1"):
         n = seed()
         print(f"Demo data: 2 businesses with {n} leads added (SEED_DEMO=true).")
-    elif os.getenv("DEMO_PASSWORD"):
+        return
+    ensure_agency(demo_password())  # a database seeded before the agency view existed gets the account too
+    if os.getenv("DEMO_PASSWORD"):
         # data seeded elsewhere (e.g. from a laptop) keeps the laptop password; use the server's instead
-        for _slug, _name, _tpl, email, _owner, _data in DEMO:
+        for email in [d[3] for d in DEMO] + [auth.DEMO_AGENCY]:
             user = db.user_by_email(email)
             if user and not auth.check_password(os.getenv("DEMO_PASSWORD"), user["password_hash"]):
                 db.execute("UPDATE users SET password_hash=? WHERE id=?",
@@ -338,5 +348,5 @@ if __name__ == "__main__":
     reset()
     business.bootstrap()
     n = seed()
-    print(f"Demo data ready: 2 businesses, {n} leads. Log in as owner@brightpath.demo or owner@stride.demo "
+    print(f"Demo data ready: 2 businesses, {n} leads. Log in as owner@brightpath.demo or owner@stride.demo, or as agency@leadbot.demo for the agency view "
           f"(password: {demo_password() if os.getenv('DEMO_PASSWORD') or not os.getenv('RENDER') else 'see DEMO_PASSWORD'}).")

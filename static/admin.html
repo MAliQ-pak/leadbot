@@ -20,6 +20,7 @@
       <a href="#audit" data-page="audit">Audit log</a>
       <a href="#bot" data-page="bot">Bot &amp; knowledge <span id="nav-un" class="count alert" title="Unanswered questions" hidden>0</span></a>
       <a href="/app/setup">Setup &amp; install</a>
+      <a id="agency-link" href="/agency" hidden>Agency view &#8599;</a>
     </nav>
     <div class="side-foot">
       <a id="site-link" href="/" target="_blank">View website &#8599;</a>
@@ -30,6 +31,10 @@
   </aside>
 
   <main>
+    <div id="support-bar" class="support-bar" role="status" hidden>
+      <span>Support view: you are seeing <b id="support-biz"></b> as its owner does. Everything you change is logged under your name.</span>
+      <button id="support-exit" class="btn" type="button">Back to agency</button>
+    </div>
     <header class="top">
       <h1 id="page-title">Overview</h1>
       <span class="live"><i></i> Live, updates every 5 s</span>
