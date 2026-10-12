@@ -19,7 +19,7 @@ TEMPLATES = {
         "blurb": "prices, installation, warranty, site visits",
         "sample": "BrightPath Solar",
         "bot_name": "BrightPath Assistant",
-        "color": "#3E5C3F",
+        "color": "#047857",
         "greeting": "Assalam o Alaikum! I can help with prices, installation, warranty, installments or booking a free site visit. You can write in English or Roman Urdu.",
         "quick_replies": ["How much is a 5 kW system?", "5kw ki qeemat kitni hai?", "Book a free site visit", "Do you offer installments?"],
         "questions": {
@@ -426,7 +426,7 @@ Open Tuesday to Sunday, 11 am to 8 pm; closed on Mondays. Glow Studio, MM Alam R
         "blurb": "empty sections to fill in",
         "sample": "My business",
         "bot_name": "Assistant",
-        "color": "#3E5C3F",
+        "color": "#047857",
         "greeting": "Hi! How can I help you today?",
         "quick_replies": ["What do you offer?", "What are your prices?", "How can I contact you?"],
         "questions": {

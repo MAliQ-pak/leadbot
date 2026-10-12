@@ -1,8 +1,8 @@
 /* Stride Shoes demo site: the same palette as LeadBot, led by navy instead of green. */
 :root {
-  --ink: #1C1B18; --text: #5F5A51; --muted: #8A8478; --line: #E7E0D4; --page: #FFFDF8; --alt: #F7F2EA;
-  --navy: #2E3A6E; --navy-d: #1A1A1F; --blue: #2B5CE6; --sky: #C2D5F2; --sky-l: #EEF3FB;
-  --font-display: "Fraunces", Georgia, serif; --font-body: "Inter", -apple-system, "Segoe UI", sans-serif;
+  --ink: #0F172A; --text: #475569; --muted: #64748B; --line: #E2E8F0; --page: #FFFFFF; --alt: #F6F8FA;
+  --navy: #2E3A6E; --navy-d: #0F172A; --blue: #2B5CE6; --sky: #C2D5F2; --sky-l: #EEF3FB;
+  --font-display: "Plus Jakarta Sans", "Inter", -apple-system, "Segoe UI", sans-serif; --font-body: "Inter", -apple-system, "Segoe UI", sans-serif;
 }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
@@ -20,7 +20,7 @@ a { color: inherit; }
 .btn-light { background: #fff; color: var(--navy); }
 .btn-light:hover { background: var(--sky-l); }
 
-.nav { position: sticky; top: 0; z-index: 10; background: rgba(255, 253, 248, .92); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+.nav { position: sticky; top: 0; z-index: 10; background: rgba(255, 255, 255, .9); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
 .nav-in { display: flex; align-items: center; gap: 24px; height: 68px; }
 .logo { font-family: var(--font-display); font-weight: 600; font-size: 26px; text-decoration: none; }
 .logo span { color: var(--blue); }
@@ -48,7 +48,7 @@ a { color: inherit; }
 .product { background: #fff; border: 1px solid var(--line); border-radius: 22px; padding: 16px 16px 20px; display: flex; flex-direction: column; gap: 8px; }
 .pic { height: 150px; border-radius: 16px; }
 .p1 { background: linear-gradient(135deg, #2E3A6E, #2B5CE6); }
-.p2 { background: linear-gradient(135deg, #1C1B18, #4B463D); }
+.p2 { background: linear-gradient(135deg, #0F172A, #334155); }
 .p3 { background: linear-gradient(135deg, #7A5A2A, #F2E3CF); }
 .p4 { background: linear-gradient(135deg, #3E5C3F, #DEEBDB); }
 .product h3 { font-size: 19px; margin-top: 6px; }
@@ -85,3 +85,8 @@ a { color: inherit; }
   .grid { grid-template-columns: 1fr; }
   .banner { flex-direction: column; align-items: flex-start; padding: 28px; }
 }
+
+/* ---------- Commerce Emerald skin ---------- */
+h1, h2, h3, h4 { font-weight: 700; letter-spacing: -.025em; }
+em { font-style: normal; font-weight: inherit; color: var(--navy); text-decoration: underline; text-decoration-color: var(--sky);
+     text-decoration-thickness: .14em; text-underline-offset: .14em; text-decoration-skip-ink: none; }

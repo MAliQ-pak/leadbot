@@ -1,3 +1,5 @@
+/* Headings use Plus Jakarta Sans from Google Fonts; offline, they fall back to the local Inter below. */
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap");
 /* Local copies of Fraunces and Inter (SIL Open Font License, see the OFL files here), so every
    page shows the right fonts with no internet. Variable fonts: one file covers every weight. */
 @font-face {

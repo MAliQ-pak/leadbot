@@ -1,12 +1,12 @@
 /* BrightPath Solar demo website. Fonts: Fraunces (headings) + Inter (body), falling back to
    Georgia / system fonts if offline, so the page always renders. */
 :root {
-  --ink: #1C1B18; --ink-2: #4B463D; --text: #5F5A51; --muted: #8A8478;
-  --line: #E7E0D4; --page: #FFFDF8; --alt: #F7F2EA; --card: #FFFFFF;
-  --green: #3E5C3F; --green-d: #2D462F; --green-dk: #243A27; --green-tint: #DEEBDB; --green-tint-2: #E8F0E4;
-  --sand: #F2E3CF; --brown: #7A5A2A;
-  --radius-card: 24px; --shadow: 0 4px 28px rgba(31, 35, 25, .06);
-  --font-display: "Fraunces", Georgia, serif;
+  --ink: #0F172A; --ink-2: #334155; --text: #475569; --muted: #64748B;
+  --line: #E2E8F0; --page: #FFFFFF; --alt: #F6F8FA; --card: #FFFFFF;
+  --green: #047857; --green-d: #065F46; --green-dk: #064E3B; --green-tint: #D1FAE5; --green-tint-2: #ECFDF5;
+  --sand: #FEF3C7; --brown: #B45309;
+  --radius-card: 24px; --shadow: 0 4px 28px rgba(15, 23, 42, .06);
+  --font-display: "Plus Jakarta Sans", "Inter", -apple-system, "Segoe UI", sans-serif;
   --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 * { box-sizing: border-box; }
@@ -24,12 +24,12 @@ a { color: inherit; }
 .btn-sun { background: var(--green); color: #fff; }
 .btn-sun:hover { background: var(--green-d); }
 .btn-dark { background: var(--ink); color: #fff; }
-.btn-dark:hover { background: #23221E; }
+.btn-dark:hover { background: #1E293B; }
 .btn-ghost { background: var(--card); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
 .btn-ghost:hover { box-shadow: inset 0 0 0 1px var(--green); }
 
 /* nav */
-.nav { position: sticky; top: 0; z-index: 10; background: rgba(255, 253, 248, .92); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+.nav { position: sticky; top: 0; z-index: 10; background: rgba(255, 255, 255, .9); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
 .nav-in { display: flex; align-items: center; gap: 24px; height: 70px; }
 .logo { display: flex; align-items: center; gap: 8px; font-family: var(--font-display); font-weight: 600; font-size: 22px; text-decoration: none; }
 .logo svg { width: 30px; height: 30px; }
@@ -39,7 +39,7 @@ a { color: inherit; }
 .links a:hover { color: var(--green); }
 
 /* hero */
-.hero { background: linear-gradient(160deg, #EEF3E9 0%, #E5EEDA 100%); padding: 80px 0 88px; }
+.hero { background: linear-gradient(160deg, #F0FDF4 0%, #FFFFFF 100%); padding: 80px 0 88px; }
 .hero-in { display: grid; grid-template-columns: 1.1fr 1fr; gap: 40px; align-items: center; }
 .eyebrow { font-family: var(--font-body); text-transform: uppercase; letter-spacing: .1em; font-size: 12px; font-weight: 600; color: var(--green); margin: 0 0 12px; }
 .hero h1 { font-size: clamp(38px, 5.4vw, 62px); }
@@ -48,13 +48,13 @@ a { color: inherit; }
 .cta { display: flex; gap: 12px; flex-wrap: wrap; }
 .trust { list-style: none; padding: 0; margin: 30px 0 0; display: flex; gap: 18px; flex-wrap: wrap; font-size: 14px; font-weight: 500; color: var(--ink-2); }
 .trust li::before { content: "\2713"; color: var(--green); font-weight: 700; margin-right: 6px; }
-.hero-art { width: 100%; max-width: 440px; justify-self: center; filter: drop-shadow(0 20px 30px rgba(45, 70, 47, .14)); }
+.hero-art { width: 100%; max-width: 440px; justify-self: center; filter: drop-shadow(0 20px 30px rgba(4, 120, 87, .14)); }
 
 /* stats strip */
 .stats { background: var(--green-dk); color: #fff; }
 .stats-in { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; padding-top: 30px; padding-bottom: 30px; text-align: center; }
 .stats b { display: block; font-family: var(--font-display); font-weight: 600; font-size: 34px; color: #fff; }
-.stats span { font-size: 14px; color: #C9D6C6; }
+.stats span { font-size: 14px; color: #A7F3D0; }
 
 /* sections */
 .section { padding: 88px 0; }
@@ -68,7 +68,7 @@ a { color: inherit; }
 
 /* packages */
 .price { position: relative; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-card); padding: 30px; display: flex; flex-direction: column; gap: 10px; box-shadow: var(--shadow); }
-.price.featured { border: 2px solid var(--green); box-shadow: 0 16px 40px rgba(45, 70, 47, .12); }
+.price.featured { border: 2px solid var(--green); box-shadow: 0 16px 40px rgba(4, 120, 87, .12); }
 .price h3 { font-size: 22px; }
 .price .amt { font-family: var(--font-body); font-size: 30px; font-weight: 700; margin: 0; letter-spacing: -.02em; color: var(--ink); }
 .price .amt small { font-size: 14px; font-weight: 500; color: var(--muted); letter-spacing: 0; }
@@ -96,7 +96,7 @@ a { color: inherit; }
 /* contact banner */
 .banner { background: var(--green-d); color: #fff; border-radius: var(--radius-card); padding: 48px; display: flex; align-items: center; justify-content: space-between; gap: 28px; }
 .banner h2 { margin-bottom: 10px; color: #fff; }
-.banner p { margin: 0; color: #C9D6C6; max-width: 40em; }
+.banner p { margin: 0; color: #A7F3D0; max-width: 40em; }
 .banner .btn-sun { background: #fff; color: var(--green-d); }
 .banner .btn-sun:hover { background: var(--green-tint); }
 
@@ -123,3 +123,8 @@ a { color: inherit; }
   .nav-in .btn { padding: 8px 12px; font-size: 14px; }
   .logo { font-size: 19px; }
 }
+
+/* ---------- Commerce Emerald skin ---------- */
+h1, h2, h3, h4 { font-weight: 700; letter-spacing: -.025em; }
+em { font-style: normal; font-weight: inherit; color: var(--green); text-decoration: underline; text-decoration-color: #6EE7B7;
+     text-decoration-thickness: .14em; text-underline-offset: .14em; text-decoration-skip-ink: none; }

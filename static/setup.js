@@ -1,8 +1,8 @@
 /* Setup wizard: five steps that configure one business's bot, with a live preview beside them. */
 const $ = id => document.getElementById(id);
-const COLORS = ["#3E5C3F", "#2E3A6E", "#2B5CE6", "#7A5A2A", "#5E3A6E", "#1C1B18"];
+const COLORS = ["#047857", "#2E3A6E", "#2563EB", "#B45309", "#7C3AED", "#0F172A"];
 const FIELDS = ["need", "name", "phone", "budget", "timeline"];
-let me = null, step = 1, color = "#3E5C3F";
+let me = null, step = 1, color = "#047857";
 
 async function api(path, opts) {
   const r = await fetch(path, opts);
@@ -45,7 +45,7 @@ function fill() {
   $("s-3").value = s.stage_names.site_visit; $("s-4").value = s.stage_names.quote_sent;
   const origin = location.origin;
   const script = `<script src="${origin}/static/widget.js" data-bot="${b.slug}" data-color="${color}" defer></script>`;
-  const iframe = `<iframe src="${origin}/bot/${b.slug}" title="${b.name} chat" style="width:380px;height:560px;border:1px solid #E7E0D4;border-radius:18px"></iframe>`;
+  const iframe = `<iframe src="${origin}/bot/${b.slug}" title="${b.name} chat" style="width:380px;height:560px;border:1px solid #E2E8F0;border-radius:18px"></iframe>`;
   $("code-script").querySelector("span").textContent = script;
   $("code-iframe").querySelector("span").textContent = iframe;
   $("direct-link").href = $("direct-link").textContent = `${origin}/bot/${b.slug}`;
