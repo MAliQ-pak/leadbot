@@ -164,3 +164,15 @@ def test_pages_and_code_are_always_rechecked(shop, visitor):
     for c, path in [(visitor, "/"), (visitor, "/signup"), (visitor, "/bot/brightpath-solar"), (client, "/app"),
                     (visitor, "/static/admin.js"), (visitor, "/static/widget.js"), (visitor, "/static/admin.css")]:
         assert c.get(path).headers.get("cache-control") == "no-cache", path
+
+
+
+def test_every_leadbot_page_has_the_logo_and_icons(shop, visitor):
+    client, _ = shop
+    for c, path in [(visitor, "/"), (visitor, "/signup"), (visitor, "/login"), (visitor, "/join"), (client, "/app"),
+                    (client, "/app/setup"), (visitor, "/bot/brightpath-solar")]:
+        html = c.get(path).text
+        assert "/static/brand/favicon.svg" in html and "apple-touch-icon" in html, path
+    for f in ["logo-mark.svg", "logo.svg", "favicon.svg", "favicon-32.png", "favicon.ico", "apple-touch-icon.png",
+              "icon-192.png", "icon-512.png", "site.webmanifest"]:
+        assert visitor.get(f"/static/brand/{f}").status_code == 200, f

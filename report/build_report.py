@@ -291,8 +291,8 @@ code.wrap {{ white-space: normal; font-size: 7.8pt; }}
 .toc a {{ color: {C['ink']}; border: 0; }}
 """
 
-SUN = (f"<svg class='sun' viewBox='0 0 32 32'><circle cx='16' cy='16' r='7' fill='{C['green']}'/><g stroke='{C['green']}' stroke-width='2.5' stroke-linecap='round'>"
-       "<path d='M16 2v4M16 26v4M2 16h4M26 16h4M6 6l2.8 2.8M23.2 23.2 26 26M6 26l2.8-2.8M23.2 8.8 26 6'/></g></svg>")
+# the LeadBot logo mark ("Rising lead"), read from static/brand so the report always matches the product
+MARK = re.sub(r"<!--.*?-->", "", (ROOT / "static" / "brand" / "logo-mark.svg").read_text(encoding="utf-8"), flags=re.S)     .replace("<svg ", "<svg class='sun' ", 1)
 
 
 def cover(eyebrow, lede):
@@ -303,8 +303,8 @@ def cover(eyebrow, lede):
         + (f"<span class='roll'>{html.escape(roll)}</span>" if roll else "<span class='roll todo'>roll number: add in build_report.py</span>")
         + "</dd>" for i, (name, roll, _) in enumerate(TEAM))
     return f"""<section class='cover'>
-<div class='brand'>{SUN.replace("class='sun'", "width='20'")}LeadBot <i>FYP</i></div>
-{SUN}
+<div class='brand'>{MARK.replace("class='sun'", "width='22' height='22'")}LeadBot <i>FYP</i></div>
+{MARK}
 <div class='eyebrow'>{html.escape(eyebrow)}</div>
 <h1>{html.escape(TITLE)}</h1>
 <div class='sub'>{html.escape(SUBTITLE)}</div>

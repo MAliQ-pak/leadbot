@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="LeadBot">
+  <!-- LeadBot mark, "Rising lead": a chat bubble whose conversation climbs into a growth arrow -->
+  <rect width="64" height="64" rx="16" fill="#047857"/>
+  <path d="M22 13h20a11 11 0 0 1 11 11v8a11 11 0 0 1-11 11H29l-10 8v-8.6A11 11 0 0 1 11 32v-8a11 11 0 0 1 11-11z"
+        fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M20 35l7.5-7 5.5 4.5L43 23" fill="none" stroke="#6EE7B7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M36.5 22.5H43.5V29.5" fill="none" stroke="#6EE7B7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

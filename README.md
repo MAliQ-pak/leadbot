@@ -1,3 +1,5 @@
+<p align="center"><img src="static/brand/logo.svg" alt="LeadBot" width="260"></p>
+
 # LeadBot: AI Lead Qualification Chatbot (FYP)
 
 A chatbot product for small businesses. A business signs up, picks an industry template (solar installer, shoe store, clinic, restaurant or caterer, real estate agency, school or tuition academy, salon, or start from scratch), teaches the bot its own prices and policies, tests it in a live preview, and pastes one line of code on its website. The bot answers customers only from that business's knowledge, collects their details, scores each lead (hot / warm / cold, with a reason) and puts it on the business's own pipeline.
@@ -92,7 +94,7 @@ pip install -r requirements-dev.txt
 python -m pytest
 ```
 
-113 tests in `tests/` (about ten seconds): scoring, retrieval for every template, the website crawler's safety checks, passwords and sessions, and the API, including that no business can read, change or delete another's data. They use a throwaway SQLite file, the offline bot and a fake website, so they need no internet, AI key or database server, and never touch `leadbot.db` or the live database. GitHub runs them on every push (`.github/workflows/tests.yml`).
+114 tests in `tests/` (about ten seconds): scoring, retrieval for every template, the website crawler's safety checks, passwords and sessions, and the API, including that no business can read, change or delete another's data. They use a throwaway SQLite file, the offline bot and a fake website, so they need no internet, AI key or database server, and never touch `leadbot.db` or the live database. GitHub runs them on every push (`.github/workflows/tests.yml`).
 
 ## Project report
 

@@ -28,7 +28,7 @@ a { color: inherit; }
 /* nav */
 .nav { position: sticky; top: 0; z-index: 10; background: rgba(255, 255, 255, .9); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
 .nav-in { display: flex; align-items: center; gap: 22px; height: 68px; }
-.logo { display: flex; align-items: center; gap: 8px; font-family: var(--font-display); font-weight: 600; font-size: 22px; text-decoration: none; }
+.logo { display: flex; align-items: center; gap: 9px; font-family: var(--font-display); font-weight: 800; font-size: 22px; letter-spacing: -.03em; text-decoration: none; }
 .logo svg { width: 28px; height: 28px; }
 .links { display: flex; gap: 22px; margin-left: auto; font-size: 15px; font-weight: 500; }
 .links a { text-decoration: none; color: var(--ink-2); }
@@ -155,3 +155,7 @@ label.field small { font-weight: 400; color: var(--muted); }
 h1, h2, h3, h4 { font-weight: 700; letter-spacing: -.025em; }
 em { font-style: normal; font-weight: inherit; color: var(--green); text-decoration: underline; text-decoration-color: #6EE7B7;
      text-decoration-thickness: .14em; text-underline-offset: .14em; text-decoration-skip-ink: none; }
+
+/* ---------- logo ---------- */
+.logo .mark { display: block; width: 30px; height: 30px; border-radius: 8px; }
+.logo .bot { color: var(--green); }

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 64" role="img" aria-label="LeadBot">
+  <!-- LeadBot logo: the mark plus the wordmark (Plus Jakarta Sans 800; "Bot" in emerald) -->
+  <rect width="64" height="64" rx="16" fill="#047857"/>
+  <path d="M22 13h20a11 11 0 0 1 11 11v8a11 11 0 0 1-11 11H29l-10 8v-8.6A11 11 0 0 1 11 32v-8a11 11 0 0 1 11-11z"
+        fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M20 35l7.5-7 5.5 4.5L43 23" fill="none" stroke="#6EE7B7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M36.5 22.5H43.5V29.5" fill="none" stroke="#6EE7B7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="80" y="45" font-family="'Plus Jakarta Sans', 'Segoe UI', Arial, sans-serif" font-size="38" font-weight="800"
+        letter-spacing="-1.2" fill="#0F172A">Lead<tspan fill="#047857">Bot</tspan></text>
+</svg>
