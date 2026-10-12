@@ -290,40 +290,39 @@ The test box shows which topics a question matches, with a match percentage and 
 
 ### 5.9 User interface design
 
-All interfaces (product pages, setup wizard, chat window, demo websites and dashboard) follow one design specification: a serif display font over a clean sans-serif body, and a warm palette built around forest green on cream. One set of colour tokens is shared across the stylesheets, so every page reads as one product. Each business chooses its own brand colour for its bubble and chat header; the Stride Shoes demo uses navy.
+All interfaces (product pages, setup wizard, chat window, demo websites and dashboard) follow one design system, "Commerce Emerald": a modern sans-serif look with emerald green on white and slate. It started as a design generated with Google Stitch from a description of LeadBot; we took its palette and typography and rebuilt them in LeadBot's own stylesheets rather than copying its generated code, so every feature stayed as it was. Each stylesheet keeps its colours and fonts in one block of settings at the top, so the whole product was reskinned by changing those values. We left out the made-up statistics Stitch put on its sample page ("3,200+ shops active"). Each business still chooses its own brand colour for its bubble and chat header; the Stride Shoes demo keeps navy.
 
 **Typography**
 
 | Font | Weights | Used for |
 | --- | --- | --- |
-| Fraunces | 600 | Headings, the logo, lead names in the dashboard, the chat window title |
-| Fraunces | 600 italic | Emphasised words, such as "your" in the home page headline |
+| Plus Jakarta Sans | 700 | Headings, the logo, lead names in the dashboard, the chat window title |
 | Inter | 400 | Body text, chat messages, table cells |
 | Inter | 500 | Navigation, labels, tabs |
 | Inter | 600 | Buttons, column and card titles |
 | Inter | 700 | Numbers: scores, prices, totals |
 
-Both fonts are served from the project's own `static/fonts` folder (open-licence variable fonts, one file covering every weight), so every page, and this report, shows them with no internet connection.
+Emphasised words, such as "your" in the home page headline, are underlined in mint instead of being set in italics. Inter is served from the project's own `static/fonts` folder; Plus Jakarta Sans loads from Google Fonts, and without internet the headings fall back to Inter, so the pages still work offline.
 
 **Colour scheme**
 
 | Role | Hex | Used for |
 | --- | --- | --- |
-| Forest green | #3E5C3F | Primary buttons, links, accents, the BrightPath brand colour, "warm" tag |
-| Dark green | #2D462F / #243A27 | Button hover, chat header, stats strip, contact banner |
-| Ink | #1C1B18 | Main text, dashboard sidebar |
-| Body text | #4B463D / #5F5A51 | Paragraphs and secondary text |
-| Muted text | #8A8478 / #A39B8B | Hints, timestamps, empty states |
-| Cream | #F7F2EA / #FFFDF8 | Page backgrounds and cards |
-| Borders | #E7E0D4 / #EDE6D8 | Card, table and input outlines |
-| Green tint | #DEEBDB / #E8F0E4 | Quick-reply chips, row hover, hero gradient (#EEF3E9 to #E5EEDA) |
+| Emerald | #047857 | Primary buttons, links, accents, the BrightPath brand colour, "warm" tag |
+| Dark emerald | #065F46 / #064E3B | Button hover, chat header, stats strip, contact banner |
+| Mint | #D1FAE5 / #ECFDF5 / #6EE7B7 | Quick-reply chips, row hover, hero background, the underline under emphasised words |
+| Slate | #0F172A | Main text, dashboard sidebar |
+| Body text | #334155 / #475569 | Paragraphs and secondary text |
+| Muted text | #64748B / #94A3B8 | Hints, timestamps, empty states, "cold" tag |
+| White and cool grey | #FFFFFF / #F6F8FA | Cards and page backgrounds |
+| Borders | #E2E8F0 / #EEF2F6 | Card, table and input outlines |
+| Amber | #B45309 on #FEF3C7 | "Hot" tag, stage 4, Q&A source labels |
 | Blue | #2B5CE6 | The classifier's bar in score breakdowns; a brand colour choice |
-| Sand and brown | #F2E3CF / #7A5A2A | "Hot" tag, stage 4, Q&A source labels |
 | Navy | #2E3A6E on #EEF3FB | New stage, document labels, the Stride Shoes brand colour |
-| Purple | #4C36D6 on #ECE9FB, #5E3A6E on #E8DCEB | Contacted and stage 3 |
+| Violet | #4C36D6 on #ECE9FB, #7C3AED on #EDE9FE | Contacted and stage 3 |
 | Destructive red | hsl(0 84% 60%) | Delete buttons and the unanswered-questions alert only |
 
-The specification has no red or amber for lead temperature, so hot, warm and cold use its own tones: brown for hot, green for warm and grey (#6F695F) for cold. Red is kept for destructive actions, so it always means "careful".
+Lead temperature uses amber for hot, emerald for warm and grey for cold, not red: red is kept for destructive actions, so it always means "careful".
 
 ## 6 Testing and evaluation
 
@@ -525,7 +524,7 @@ The answers are written in the team's voice, ready to say aloud. The companion P
 
 **Walk me through what happens when a visitor sends a message.** The chat window sends the message with the business's bot name. The server finds the business, saves the message, retrieves the three best topics from that business's knowledge and decides whether it is confident. The AI gets the rules, the business's own questions, known details, topics and conversation, and returns a reply and lead details as JSON. Then the rules and classifier score the lead and everything is saved under that business.
 
-**How did you decide on the visual design?** We followed one design specification across every page: Fraunces for headings, Inter for body text, and a forest-green-on-cream palette. Colour carries meaning consistently, so green is for actions, each deal stage keeps its colour everywhere, and red appears only on destructive actions. Each business picks its own colour for its chat.
+**How did you decide on the visual design?** We generated a design with Google Stitch from a description of LeadBot, chose its "Commerce Emerald" system out of several options we tried, and rebuilt it in our own stylesheets: Plus Jakarta Sans for headings, Inter for body text, emerald on white and slate. Colour carries meaning consistently, so green is for actions, each deal stage keeps its colour everywhere, and red appears only on destructive actions. Each business picks its own colour for its chat.
 
 ### A.3 Retrieval
 

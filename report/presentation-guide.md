@@ -120,7 +120,7 @@ Small businesses lose customers who visit their website after hours, ask a quest
 | Gemini is slow or failing | Carry on: the offline bot answers. Say: "This is the fallback we designed: the AI is unavailable, so the rule-based bot answers instantly." |
 | The first reply takes about 10 seconds | Google's main model is busy; the bot waited 8 seconds, then switched. Say so: the next replies are fast. |
 | The live site is asleep or down | Use the laptop. Say: "The free host sleeps; the same code runs locally." |
-| No internet at all | Laptop only, with `DATABASE_URL` switched off: every page, the wizard, the dashboard and the offline bot all work offline, fonts included. |
+| No internet at all | Laptop only, with `DATABASE_URL` switched off: every page, the wizard, the dashboard and the offline bot all work offline; headings switch to the local Inter font. |
 | "An account with this email already exists" | Use the next rehearsal email. |
 | The double-clicked shop page shows no bubble | You are offline, or the code was pasted inside the `<h1>`. Open the direct link from step 5 instead; it is the same chat. |
 | A drag on the pipeline board does not move | Open the lead and press the stage button instead. |
@@ -129,14 +129,14 @@ Small businesses lose customers who visit their website after hours, ask a quest
 
 ### 4.1 Your part in one sentence
 
-I built everything a visitor and a new business owner see: the home page, sign-up and log-in, the five-step setup wizard with its live preview, the chat window and the one-line embed code, the two demo websites, and the design system (Fraunces and Inter, the forest-green palette) across all of them.
+I built everything a visitor and a new business owner see: the home page, sign-up and log-in, the five-step setup wizard with its live preview, the chat window and the one-line embed code, the two demo websites, and the design system (Commerce Emerald: Plus Jakarta Sans and Inter, emerald on white) across all of them.
 
 ### 4.2 Talking points (0:00 - 10:00)
 
 1. **Opening (2 min).** The supervisor's question, the team of four and our areas, the 60-second pitch (2.1).
 2. **Two businesses, one system (1.5 min).** BrightPath Solar and Stride Shoes are two separate businesses on the same LeadBot, each with its own bot, colour, knowledge and leads. Both websites use the same one line of code with a different bot name.
 3. **A new shoe shop, live (5 min).** Sign up, the template gives a working bot at once, teach it, change its look, copy the code, paste it on "the shop's website". The preview is the real bot, so what the owner tests is exactly what visitors get, and test chats never count as leads.
-4. **Design and phones (1.5 min).** One design specification: Fraunces 600 for headings, Inter 400 to 700 for text, forest green #3E5C3F on cream; each business picks its own chat colour. Every page works at phone width with no sideways scrolling; on a phone the chat fills the screen.
+4. **Design and phones (1.5 min).** One design system, Commerce Emerald, which we generated with Google Stitch and rebuilt in our own stylesheets: Plus Jakarta Sans for headings, Inter for text, emerald #047857 on white; each business picks its own chat colour. Changing the colour settings at the top of each stylesheet reskinned every page at once. Every page works at phone width with no sideways scrolling; on a phone the chat fills the screen.
 
 ### 4.3 Demo steps
 
@@ -165,7 +165,7 @@ I built everything a visitor and a new business owner see: the home page, sign-u
 | `static/bot.html`, `bot.js`, `bot.css` | The chat window, `/bot/{name}`. `start()` loads the business's colour, name, greeting and quick replies, then restores the chat history; `send()` posts to `/api/chat`; replies are added with `textContent`. With `?preview=1` it is the owner's preview. |
 | `static/widget.js` | The embed loader: reads `data-bot` and `data-color`, draws the bubble, and on first click points an iframe at `/bot/{name}`. `LeadBot.open(text)` opens it with a question. |
 | `static/demo/` | The two demo websites; buttons with `data-chat` call `LeadBot.open()`. |
-| `static/fonts/fonts.css` | `@font-face` rules for the local Fraunces and Inter files. |
+| `static/fonts/fonts.css` | Loads Plus Jakarta Sans from Google Fonts and the local Inter file; offline, headings fall back to Inter. |
 
 Key details an examiner may ask you to point at:
 
@@ -198,6 +198,9 @@ The session ID is saved in the browser's `localStorage`. On load, the chat windo
 
 **Is it accessible?**
 Buttons have labels, and the message list is announced to screen readers. Some light-grey hint text is below the recommended contrast, and we have not run a full accessibility audit; that is a fair next step.
+
+**Where did the design come from?**
+We described LeadBot to Google Stitch, an AI design tool, and it generated a design system and screens. We tried four skins on separate branches and chose its "Commerce Emerald". We did not paste in Stitch's code: we took its colours and fonts and changed the settings at the top of our own stylesheets, so nothing else changed. We also left out the statistics it invented, such as "3,200+ shops active".
 
 **What happens on a phone?**
 Below 480 px wide the chat fills the screen, and the wizard's columns stack. We checked the home page, sign-up, wizard, dashboard and Stride site at 375 px for sideways scrolling.
