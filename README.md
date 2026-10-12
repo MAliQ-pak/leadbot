@@ -60,7 +60,7 @@ The loader draws a chat bubble and opens `/bot/your-business` in an iframe. The 
 
 ## Agency view (super admins)
 
-Emails in `SUPER_ADMINS` (comma-separated; on a laptop with none set, `agency@leadbot.demo`) land on `/agency` after log-in: every business with its owner, leads, hot leads, chats today and last activity, plus recent activity across all of them. From there a super admin can open any business's dashboard in support view (logged in that business's audit log), suspend or reactivate a business (its bot stops answering and its owner can't log in), or delete it (type its name to confirm). Set `SUPER_ADMINS` in Render to include `agency@leadbot.demo` and/or your team's emails.
+Emails in `SUPER_ADMINS` (comma-separated; on a laptop with none set, `agency@leadbot.demo`) land on `/agency` after log-in: every business with its owner, leads, hot leads, chats today and last activity, plus recent activity across all of them. From there a super admin can open any business's dashboard in support view (logged in that business's audit log), suspend or reactivate a business (its bot stops answering and its owner can't log in), or delete it (type its name to confirm). Set `SUPER_ADMINS` in Render to include `agency@leadbot.demo` and/or your team's emails. Listing an email gives it agency powers but does not create an account: each team member sets up their own agency login once at `/join` (only listed emails are accepted), then logs in normally.
 
 ## Accounts and data separation
 
@@ -92,7 +92,7 @@ pip install -r requirements-dev.txt
 python -m pytest
 ```
 
-112 tests in `tests/` (about ten seconds): scoring, retrieval for every template, the website crawler's safety checks, passwords and sessions, and the API, including that no business can read, change or delete another's data. They use a throwaway SQLite file, the offline bot and a fake website, so they need no internet, AI key or database server, and never touch `leadbot.db` or the live database. GitHub runs them on every push (`.github/workflows/tests.yml`).
+113 tests in `tests/` (about ten seconds): scoring, retrieval for every template, the website crawler's safety checks, passwords and sessions, and the API, including that no business can read, change or delete another's data. They use a throwaway SQLite file, the offline bot and a fake website, so they need no internet, AI key or database server, and never touch `leadbot.db` or the live database. GitHub runs them on every push (`.github/workflows/tests.yml`).
 
 ## Project report
 

@@ -116,3 +116,18 @@ def test_unexpected_errors_are_recorded_for_the_agency(monkeypatch, shop):
     assert r.status_code == 500 and "LeadBot team" in r.json()["detail"]
     assert any(e["action"] == "Server error" and "ZeroDivisionError" in e["detail"]
                for e in db.rows("SELECT action, detail FROM audit WHERE business_id IS NULL"))
+
+
+def test_team_member_can_join_with_a_listed_email_only(monkeypatch, visitor):
+    monkeypatch.setenv("SUPER_ADMINS", "agency@leadbot.demo, Team.Member@Example.com")
+    body = {"name": "Team Member", "email": "team.member@example.com", "password": PASSWORD}
+    c = TestClient(main.app)
+    r = c.post("/api/auth/join", json=body)
+    assert r.status_code == 200 and r.json()["next"] == "/agency"
+    assert c.get("/api/agency/overview").status_code == 200 and db.user_by_email(body["email"])["business_id"] is None
+    assert TestClient(main.app).post("/api/auth/join", json=body).status_code == 409  # cannot be claimed twice
+    fresh = TestClient(main.app)
+    assert fresh.post("/api/auth/login", json={"email": body["email"], "password": PASSWORD}).json()["next"] == "/agency"
+    r = visitor.post("/api/auth/join", json={**body, "email": "stranger@example.com"})
+    assert r.status_code == 403 and db.user_by_email("stranger@example.com") is None
+    assert visitor.get("/join").status_code == 200

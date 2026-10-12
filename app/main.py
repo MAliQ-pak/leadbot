@@ -81,6 +81,12 @@ class SignupIn(BaseModel):
     password: str = Field(min_length=8, max_length=200)
 
 
+class JoinIn(BaseModel):  # an agency team member creating their own agency login
+    name: str = Field(min_length=2, max_length=80)
+    email: str = Field(min_length=5, max_length=120)
+    password: str = Field(min_length=8, max_length=200)
+
+
 class LoginIn(BaseModel):
     email: str = Field(min_length=3, max_length=120)
     password: str = Field(min_length=1, max_length=200)
@@ -287,6 +293,22 @@ def login(body: LoginIn, request: Request):
     response = JSONResponse({"ok": True, "next": nxt})
     auth.set_cookie(response, request, user["id"])
     response.delete_cookie(auth.VIEW_COOKIE)  # every log-in starts outside support view
+    return response
+
+
+@app.post("/api/auth/join")
+def join_agency(body: JoinIn, request: Request):
+    """An email listed in SUPER_ADMINS can create its own agency login (no business attached), once.
+    Every other email is refused, so this cannot be used to make yourself an admin."""
+    email = body.email.strip().lower()
+    if email not in auth.super_admins():
+        raise HTTPException(403, "This email is not on the LeadBot agency list. Ask the agency to add it to SUPER_ADMINS.")
+    if db.user_by_email(email):
+        raise HTTPException(409, "This email already has an account. Please log in.")
+    uid = db.create_user(email, auth.hash_password(body.password), body.name.strip(), None)
+    db.audit(None, "auth", "Agency member joined", f"{body.name.strip()} ({email})", actor=email)
+    response = JSONResponse({"ok": True, "next": "/agency"})
+    auth.set_cookie(response, request, uid)
     return response
 
 
@@ -626,6 +648,11 @@ def signup_page():
 
 @app.get("/login")
 def login_page():
+    return _page("auth.html")
+
+
+@app.get("/join")
+def join_page():
     return _page("auth.html")
 
 

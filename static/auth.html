@@ -49,12 +49,24 @@
       <p class="err" id="login-err"></p>
       <button class="btn btn-lg" type="submit" style="width:100%">Log in</button>
       <p class="auth-switch">New here? <a href="/signup">Create your bot</a></p>
+      <p class="auth-switch">LeadBot agency team? <a href="/join">Set up your agency login</a></p>
       <div class="demo-hint">Demo accounts: <b>owner@brightpath.demo</b> and <b>owner@stride.demo</b>, and <b>agency@leadbot.demo</b> for the agency view of every business (ask the team for the password).</div>
+    </form>
+    <form id="join" class="auth-card" hidden>
+      <h1>Join the LeadBot agency</h1>
+      <p class="sub">For the team running LeadBot. Your email must already be on the agency list (SUPER_ADMINS); you choose your own password.</p>
+      <label class="field">Your name<input name="name" required minlength="2" maxlength="80"></label>
+      <label class="field">Email<input name="email" type="email" required autocomplete="email"></label>
+      <label class="field">Password <small>(at least 8 characters)</small><input name="password" type="password" required minlength="8" autocomplete="new-password"></label>
+      <p class="err" id="join-err"></p>
+      <button class="btn btn-lg" type="submit" style="width:100%">Create agency login</button>
+      <p class="auth-switch">Already set up? <a href="/login">Log in</a></p>
     </form>
   </main>
 
+
   <script>
-    const mode = location.pathname.startsWith("/signup") ? "signup" : "login";
+    const mode = location.pathname.startsWith("/signup") ? "signup" : location.pathname.startsWith("/join") ? "join" : "login";
     const form = document.getElementById(mode);
     form.hidden = false;
     form.querySelector("input").focus();
