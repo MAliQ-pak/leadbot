@@ -75,9 +75,9 @@ def test_delete_needs_the_exact_name_and_removes_everything(monkeypatch, visitor
     owner, biz = signup("Doomed Academy", "academy")
     visitor.post("/api/chat", json={"bot": biz["slug"], "session_id": "sess-ag-4", "message": "I am Hina 03331234567"})
     ag = agency_client(monkeypatch)
-    url = f"/api/agency/businesses/{biz['id']}"
-    assert ag.request("DELETE", url, json={"confirm": "doomed academy"}).status_code == 400  # must match exactly
-    assert ag.request("DELETE", url, json={"confirm": "Doomed Academy"}).status_code == 200
+    url = f"/api/agency/businesses/{biz['id']}/delete"
+    assert ag.post(url, json={"confirm": "doomed academy"}).status_code == 400  # must match exactly
+    assert ag.post(url, json={"confirm": "Doomed Academy"}).status_code == 200
     assert db.get_business(biz["id"]) is None and db.user_by_email(owner.email) is None
     for table in ("leads", "messages", "audit"):
         assert not db.rows(f"SELECT 1 AS x FROM {table} WHERE business_id=?", (biz["id"],))
@@ -97,3 +97,22 @@ def test_agency_account_not_on_the_list_gets_a_clear_message(monkeypatch):
     monkeypatch.setenv("SUPER_ADMINS", "someone-else@agency.test")
     r = TestClient(main.app).post("/api/auth/login", json={"email": email, "password": PASSWORD})
     assert r.status_code == 403 and "SUPER_ADMINS" in r.json()["detail"]
+
+
+
+def test_agency_events_stay_out_of_business_audit_logs(monkeypatch):
+    """Regression: start-up used to hand every audit row with no business to BrightPath, so the agency's
+    own log-ins appeared in BrightPath's audit log."""
+    ag = agency_client(monkeypatch)
+    db.adopt_orphans(1)  # what start-up runs
+    assert db.rows("SELECT 1 AS x FROM audit WHERE business_id IS NULL AND action='Logged in'")
+
+
+def test_unexpected_errors_are_recorded_for_the_agency(monkeypatch, shop):
+    owner, _ = shop
+    monkeypatch.setattr(main.db, "all_leads", lambda *a, **k: 1 / 0)
+    quiet = TestClient(main.app, raise_server_exceptions=False, cookies=dict(owner.cookies))
+    r = quiet.get("/api/leads")
+    assert r.status_code == 500 and "LeadBot team" in r.json()["detail"]
+    assert any(e["action"] == "Server error" and "ZeroDivisionError" in e["detail"]
+               for e in db.rows("SELECT action, detail FROM audit WHERE business_id IS NULL"))

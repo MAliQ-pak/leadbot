@@ -17,7 +17,7 @@ async function api(path, opts) {
   if (r.status === 401) { location.href = "/login"; throw new Error("401"); }
   if (r.status === 403) { location.href = "/app"; throw new Error("403"); }  // not a super admin
   const body = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(typeof body.detail === "string" ? body.detail : "Something went wrong.");
+  if (!r.ok) throw new Error(typeof body.detail === "string" ? body.detail : `Something went wrong (error ${r.status}).`);
   return body;
 }
 const post = (path, body, method = "POST") =>
@@ -74,7 +74,7 @@ document.addEventListener("click", async e => {
       const b = data.businesses.find(x => x.id == d.dataset.delete);
       const typed = prompt(`This permanently deletes ${b.name} with all its leads, chats, knowledge and accounts. It cannot be undone.\n\nType the business name to confirm:`);
       if (typed === null) return;
-      await post(`/api/agency/businesses/${b.id}`, { confirm: typed }, "DELETE");
+      await post(`/api/agency/businesses/${b.id}/delete`, { confirm: typed });
       await load();
     }
   } catch (err) { alert(err.message); }

@@ -144,8 +144,9 @@ def init():
 
 
 def adopt_orphans(business_id):
-    """Rows from before businesses existed belong to the first business (the original solar demo)."""
-    for table in ("messages", "leads", "kb_faq", "kb_docs", "audit", "unanswered"):
+    """Rows from before businesses existed belong to the first business (the original solar demo).
+    The audit log is left out: an audit row with no business is an agency event, and must stay one."""
+    for table in ("messages", "leads", "kb_faq", "kb_docs", "unanswered"):
         execute(f"UPDATE {table} SET business_id=? WHERE business_id IS NULL", (business_id,))
 
 

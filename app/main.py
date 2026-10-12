@@ -39,6 +39,17 @@ business.bootstrap()
 app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
 
+@app.exception_handler(Exception)
+async def unexpected_error(request: Request, exc: Exception):
+    """Any crash: record it in the agency's activity feed (the live server's logs are not always at hand)
+    and answer with a readable message instead of a bare "Internal Server Error"."""
+    detail = f"{request.method} {request.url.path}: {type(exc).__name__}: {str(exc)[:200]}"
+    print("Server error:", detail)
+    db.audit(None, "system", "Server error", detail, actor="server")
+    return JSONResponse({"detail": "Something went wrong on the server. The LeadBot team can see the details."},
+                        status_code=500)
+
+
 @app.middleware("http")
 async def revalidate_code(request: Request, call_next):
     """Browsers re-check pages, scripts and styles on each load, so an update reaches every website that
@@ -680,7 +691,7 @@ def agency_set_status(bid: int, body: StatusIn, user=Agency):
     return {"ok": True, "status": body.status}
 
 
-@app.delete("/api/agency/businesses/{bid}")
+@app.post("/api/agency/businesses/{bid}/delete")  # POST, not DELETE: some proxies drop a DELETE's body
 def agency_delete(bid: int, body: ConfirmIn, user=Agency):
     """Permanently delete a business and all its data. The exact business name must be typed to confirm."""
     biz = _agency_business(bid)
