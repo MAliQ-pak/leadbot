@@ -83,3 +83,17 @@ def test_delete_needs_the_exact_name_and_removes_everything(monkeypatch, visitor
         assert not db.rows(f"SELECT 1 AS x FROM {table} WHERE business_id=?", (biz["id"],))
     assert visitor.get(f"/api/bot/{biz['slug']}").status_code == 404
     assert any(e["action"] == "Business deleted by the agency" for e in ag.get("/api/agency/activity").json())
+
+
+def test_super_admins_list_is_read_leniently(monkeypatch):
+    monkeypatch.setenv("SUPER_ADMINS", ' "Agency@LeadBot.demo" ; ali@example.com,  sara@example.com\nhamza@example.com ')
+    assert auth.super_admins() == {"agency@leadbot.demo", "ali@example.com", "sara@example.com", "hamza@example.com"}
+
+
+def test_agency_account_not_on_the_list_gets_a_clear_message(monkeypatch):
+    """Regression: this used to crash the server (500) instead of explaining what is wrong."""
+    email = "orphan@agency.test"
+    db.create_user(email, auth.hash_password(PASSWORD), "Agency", None)
+    monkeypatch.setenv("SUPER_ADMINS", "someone-else@agency.test")
+    r = TestClient(main.app).post("/api/auth/login", json={"email": email, "password": PASSWORD})
+    assert r.status_code == 403 and "SUPER_ADMINS" in r.json()["detail"]

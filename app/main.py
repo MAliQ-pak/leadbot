@@ -267,6 +267,8 @@ def login(body: LoginIn, request: Request):
             db.audit(user["business_id"], "auth", "Failed login", f"from {auth.client_ip(request)}", actor="unknown")
         raise HTTPException(401, "Wrong email or password.")
     biz = db.get_business(user["business_id"]) if user["business_id"] else None
+    if not biz and not auth.is_super(user):  # an agency-only account whose email is not in SUPER_ADMINS
+        raise HTTPException(403, "This is an agency account, but its email is not in the SUPER_ADMINS setting on the server.")
     if biz and (biz.get("status") or "active") == "suspended" and not auth.is_super(user):
         raise HTTPException(403, "This account is paused. Please contact LeadBot support.")
     db.audit(biz["id"] if biz else None, "auth", "Logged in", f"from {auth.client_ip(request)}", actor=user["email"])

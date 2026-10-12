@@ -447,7 +447,7 @@ The website importer was tested on a small test site built for the purpose and o
 
 ### 6.6 Automated tests
 
-All of the checks above that can run without a person were turned into an automated test suite: 108 pytest tests in the `tests/` folder, which run in about ten seconds with `python -m pytest`. GitHub runs them on every push (`.github/workflows/tests.yml`), so a change that breaks something is caught before it reaches the live site. The suite needs no internet, AI key or database server: it uses a throwaway SQLite file, the offline bot, and a fake website for the crawler.
+All of the checks above that can run without a person were turned into an automated test suite: 110 pytest tests in the `tests/` folder, which run in about ten seconds with `python -m pytest`. GitHub runs them on every push (`.github/workflows/tests.yml`), so a change that breaks something is caught before it reaches the live site. The suite needs no internet, AI key or database server: it uses a throwaway SQLite file, the offline bot, and a fake website for the crawler.
 
 | File | Tests | What they protect |
 | --- | --- | --- |
@@ -455,7 +455,7 @@ All of the checks above that can run without a person were turned into an automa
 | `test_retrieval.py` | 58 | For all seven sample templates, answerable questions score at least 0.3 and off-topic ones below it; one industry's synonyms do not leak into another's; a new shop's template uses its own name |
 | `test_ingest.py` | 14 | Private addresses (`localhost`, `10.x`, `192.168.x`, the cloud metadata address) are refused; the crawler follows links and the sitemap, obeys `robots.txt`, stays in scope, merges `/index.html`, keeps repeated text once and stops at its page limit |
 | `test_auth.py` | 5 | Passwords are salted hashes; a forged session cookie is rejected; log-in and log-out; five failures lock the address; a used email cannot sign up again |
-| `test_agency.py` | 6 | Only super admins reach the agency routes; the overview lists every business; support view opens the chosen business, is logged in its audit log and ends on exit; a support-view cookie issued to someone else is useless; suspend stops the bot, new log-ins and open sessions, and reactivate restores them; delete needs the exact name and removes every row |
+| `test_agency.py` | 8 | Only super admins reach the agency routes; the overview lists every business; support view opens the chosen business, is logged in its audit log and ends on exit; a support-view cookie issued to someone else is useless; suspend stops the bot, new log-ins and open sessions, and reactivate restores them; delete needs the exact name and removes every row |
 | `test_api.py` | 17 | Public pages are open and owner pages locked; a visitor chat becomes a scored lead; preview chats are not leads, and a visitor cannot fake the preview flag; one business cannot read, change or delete another's leads or see its knowledge base; a chat ID cannot move between businesses; unanswered questions are logged; an unusable AI answer falls back to the offline bot; a WhatsApp click is logged, and only for the lead's own business; the CSV export has the right columns, the owner's timezone and formula protection; pages are always re-checked after an update |
 
 To check that the tests really catch faults, the private-address check was deliberately removed: all five of its tests failed, and passed again once it was restored. Writing the suite also found one more defect: deleting another business's lead (with its chat ID) changed nothing but still answered "OK" and wrote a "Lead deleted" line in the caller's audit log. It now answers "not found".
@@ -617,7 +617,7 @@ The answers are written in the team's voice, ready to say aloud. The companion P
 
 ### A.8 Testing and deployment
 
-**How did you test the system?** Cross-validation for the classifier, retrieval scores for covered and uncovered questions, scripted conversations against the real AI, setting up a new shoe shop end to end, and direct requests to check every owner route was locked and separated. The repeatable checks are 108 automated tests that GitHub runs on every push. Testing found real defects, such as long chats silently falling back to the offline bot, and a template that named the wrong shop.
+**How did you test the system?** Cross-validation for the classifier, retrieval scores for covered and uncovered questions, scripted conversations against the real AI, setting up a new shoe shop end to end, and direct requests to check every owner route was locked and separated. The repeatable checks are 110 automated tests that GitHub runs on every push. Testing found real defects, such as long chats silently falling back to the offline bot, and a template that named the wrong shop.
 
 **Does the live site still lose its data on restart?** Not any more. The first version stored everything in a file on Render's free disk, which is wiped on every restart. Now the live site uses a hosted PostgreSQL database, so sign-ups and leads survive restarts and redeploys.
 

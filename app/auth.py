@@ -12,6 +12,7 @@
 import hashlib
 import hmac
 import os
+import re
 import secrets
 import time
 from pathlib import Path
@@ -102,7 +103,8 @@ def super_admins():
     raw = os.getenv("SUPER_ADMINS", "").strip()
     if not raw and not os.getenv("RENDER"):
         raw = DEMO_AGENCY
-    return {e.strip().lower() for e in raw.split(",") if e.strip()}
+    # lenient: commas, semicolons, spaces or new lines between emails, and stray quotes, all work
+    return {e.strip().strip("\"'").lower() for e in re.split(r"[,;\s]+", raw) if e.strip().strip("\"'")}
 
 
 def is_super(user):
