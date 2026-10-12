@@ -1,5 +1,5 @@
-/* BrightPath Solar demo website. Fonts: Fraunces (headings) + Inter (body), falling back to
-   Georgia / system fonts if offline, so the page always renders. */
+/* BrightPath Solar demo website. Fonts: Plus Jakarta Sans (headings) + Inter (body), both served
+   from static/fonts, so the page looks the same with no internet. */
 :root {
   --ink: #0F172A; --ink-2: #334155; --text: #475569; --muted: #64748B;
   --line: #E2E8F0; --page: #FFFFFF; --alt: #F6F8FA; --card: #FFFFFF;

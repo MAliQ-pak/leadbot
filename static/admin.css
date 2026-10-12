@@ -1,4 +1,4 @@
-/* LeadBot admin panel. Fonts: Fraunces (headings) + Inter (everything else). */
+/* LeadBot admin panel. Fonts: Plus Jakarta Sans (headings) + Inter (everything else), both local. */
 :root {
   /* palette */
   --ink: #0F172A; --ink-2: #334155; --text: #475569; --muted: #64748B; --faint: #94A3B8;

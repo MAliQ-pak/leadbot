@@ -302,7 +302,7 @@ All interfaces (product pages, setup wizard, chat window, demo websites and dash
 | Inter | 600 | Buttons, column and card titles |
 | Inter | 700 | Numbers: scores, prices, totals |
 
-Emphasised words, such as "your" in the home page headline, are underlined in mint instead of being set in italics. Inter is served from the project's own `static/fonts` folder; Plus Jakarta Sans loads from Google Fonts, and without internet the headings fall back to Inter, so the pages still work offline.
+Emphasised words, such as "your" in the home page headline, are underlined in mint instead of being set in italics. Both fonts are served from the project's own `static/fonts` folder (open-licence variable fonts, one file covering every weight), so every page looks the same with no internet connection.
 
 **Colour scheme**
 

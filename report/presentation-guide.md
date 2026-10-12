@@ -120,7 +120,7 @@ Small businesses lose customers who visit their website after hours, ask a quest
 | Gemini is slow or failing | Carry on: the offline bot answers. Say: "This is the fallback we designed: the AI is unavailable, so the rule-based bot answers instantly." |
 | The first reply takes about 10 seconds | Google's main model is busy; the bot waited 8 seconds, then switched. Say so: the next replies are fast. |
 | The live site is asleep or down | Use the laptop. Say: "The free host sleeps; the same code runs locally." |
-| No internet at all | Laptop only, with `DATABASE_URL` switched off: every page, the wizard, the dashboard and the offline bot all work offline; headings switch to the local Inter font. |
+| No internet at all | Laptop only, with `DATABASE_URL` switched off: every page, the wizard, the dashboard and the offline bot all work offline, fonts included. |
 | "An account with this email already exists" | Use the next rehearsal email. |
 | The double-clicked shop page shows no bubble | You are offline, or the code was pasted inside the `<h1>`. Open the direct link from step 5 instead; it is the same chat. |
 | A drag on the pipeline board does not move | Open the lead and press the stage button instead. |
@@ -165,7 +165,7 @@ I built everything a visitor and a new business owner see: the home page, sign-u
 | `static/bot.html`, `bot.js`, `bot.css` | The chat window, `/bot/{name}`. `start()` loads the business's colour, name, greeting and quick replies, then restores the chat history; `send()` posts to `/api/chat`; replies are added with `textContent`. With `?preview=1` it is the owner's preview. |
 | `static/widget.js` | The embed loader: reads `data-bot` and `data-color`, draws the bubble, and on first click points an iframe at `/bot/{name}`. `LeadBot.open(text)` opens it with a question. |
 | `static/demo/` | The two demo websites; buttons with `data-chat` call `LeadBot.open()`. |
-| `static/fonts/fonts.css` | Loads Plus Jakarta Sans from Google Fonts and the local Inter file; offline, headings fall back to Inter. |
+| `static/fonts/fonts.css` | `@font-face` rules for the local Plus Jakarta Sans and Inter files (open licence), so the fonts work offline. |
 
 Key details an examiner may ask you to point at:
 

@@ -1,7 +1,13 @@
-/* Headings use Plus Jakarta Sans from Google Fonts; offline, they fall back to the local Inter below. */
-@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap");
-/* Local copies of Fraunces and Inter (SIL Open Font License, see the OFL files here), so every
-   page shows the right fonts with no internet. Variable fonts: one file covers every weight. */
+/* Local copies of Plus Jakarta Sans (headings) and Inter (body text), both under the SIL Open Font
+   License (see the OFL files here), so every page shows the right fonts with no internet.
+   Variable fonts: one file covers every weight. Fraunces is kept here only for the report PDF. */
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  src: url("/static/fonts/PlusJakartaSans-Variable.ttf") format("truetype");
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
 @font-face {
   font-family: "Inter";
   src: url("/static/fonts/Inter-Variable.ttf") format("truetype");
@@ -9,19 +15,3 @@
   font-style: normal;
   font-display: swap;
 }
-@font-face {
-  font-family: "Fraunces";
-  src: url("/static/fonts/Fraunces-Variable.ttf") format("truetype");
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Fraunces";
-  src: url("/static/fonts/Fraunces-Italic-Variable.ttf") format("truetype");
-  font-weight: 100 900;
-  font-style: italic;
-  font-display: swap;
-}
-/* Fraunces has a "wonky" axis that swaps in quirky letter shapes (mostly in italics); keep the standard shapes. */
-*, *::before, *::after { font-variation-settings: "WONK" 0 !important; }
