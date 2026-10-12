@@ -289,3 +289,6 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -.02em; }
 .wa-btn:hover { background: #075E54; }
 .wa-btn[hidden], #d-wa[hidden] + .wa-hint { display: none; }
 .wa-hint { margin: 6px 0 0; font-size: 12px; }
+.toolbar-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+#export { white-space: nowrap; }
+@media (max-width: 760px) { .toolbar-right { width: 100%; } .toolbar-right #search { flex: 1; } }

@@ -73,7 +73,10 @@
     <section id="page-leads" class="page" hidden>
       <div class="toolbar">
         <div id="tabs" class="tabs" role="tablist"></div>
-        <input id="search" type="search" placeholder="Search name, phone, need...">
+        <div class="toolbar-right">
+          <input id="search" type="search" placeholder="Search name, phone, need...">
+          <a id="export" class="btn ghost" href="/api/leads.csv" download title="All your leads as a spreadsheet (opens in Excel or Google Sheets)">Download CSV</a>
+        </div>
       </div>
       <p class="hint">Hot, Warm and Cold show open leads (any stage except Won or Lost). Won and Lost are closed deals you marked yourself.</p>
       <div class="table-wrap">

@@ -51,6 +51,7 @@ The loader draws a chat bubble and opens `/bot/your-business` in an iframe. The 
 5. The lead appears in that owner's **dashboard** (`/app`):
    - **Overview**: hot / warm / cold / won / lost totals, hot leads to call now, latest conversations.
    - **Pipeline**: a deals board with one column per stage; drag a card to move the deal.
+   - **Download CSV**: every lead as a spreadsheet (Excel or Google Sheets), times in your timezone, safe against formula injection.
    - **WhatsApp**: every lead with a phone number has a button that opens WhatsApp with their number and a ready greeting (0300-1234567 becomes 923001234567); the click is logged.
    - **Leads**: filter or search; open a lead for contact details, score breakdown, the full chat, stage and notes.
    - **Audit log**: every owner action and key event (new lead, lead turned hot, AI failed, logins).
@@ -87,7 +88,7 @@ pip install -r requirements-dev.txt
 python -m pytest
 ```
 
-98 tests in `tests/` (about ten seconds): scoring, retrieval for every template, the website crawler's safety checks, passwords and sessions, and the API, including that no business can read, change or delete another's data. They use a throwaway SQLite file, the offline bot and a fake website, so they need no internet, AI key or database server, and never touch `leadbot.db` or the live database. GitHub runs them on every push (`.github/workflows/tests.yml`).
+102 tests in `tests/` (about ten seconds): scoring, retrieval for every template, the website crawler's safety checks, passwords and sessions, and the API, including that no business can read, change or delete another's data. They use a throwaway SQLite file, the offline bot and a fake website, so they need no internet, AI key or database server, and never touch `leadbot.db` or the live database. GitHub runs them on every push (`.github/workflows/tests.yml`).
 
 ## Project report
 

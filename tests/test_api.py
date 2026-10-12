@@ -119,3 +119,48 @@ def test_whatsapp_click_is_logged_and_scoped(visitor):
     assert any(e["action"] == "WhatsApp opened" and e["target"] == "sess-wa" for e in a.get("/api/audit").json())
     assert b.post("/api/leads/sess-wa/whatsapp").status_code == 404  # not B's lead
     assert visitor.post("/api/leads/sess-wa/whatsapp").status_code == 401
+
+
+def test_csv_export(visitor):
+    import csv, io
+    a, biz_a = signup("Csv Shoes")
+    b, _ = signup("Csv Other")
+    chat(visitor, biz_a["slug"], "sess-csv-1", "My name is Sara, 03211234567, I need sneakers this week")
+    chat(visitor, biz_a["slug"], "sess-csv-2", "=HYPERLINK(\"http://evil.example\") my number is 03001112223")
+    r = a.get("/api/leads.csv?tz=-300")  # Pakistan, UTC+5
+    assert r.status_code == 200 and r.headers["content-type"].startswith("text/csv")
+    assert 'filename="leads-csv-shoes' in r.headers["content-disposition"]
+    assert r.content.startswith(b"\xef\xbb\xbf")  # tells Excel it is UTF-8
+    rows = list(csv.DictReader(io.StringIO(r.content.decode("utf-8-sig"))))
+    assert len(rows) == 2 and rows[0].keys() >= {"Name", "Phone", "Tier", "Stage", "First seen", "Last message"}
+    sara = next(x for x in rows if x["Phone"] == "03211234567")
+    assert sara["Stage"] == "New" and sara["Tier"] in ("hot", "warm") and len(sara["First seen"]) == 16
+    evil = next(x for x in rows if x["Phone"] == "03001112223")
+    assert evil["Last message"].startswith("'=")  # a typed formula stays text in Excel
+    assert len(list(csv.DictReader(io.StringIO(b.get("/api/leads.csv").content.decode("utf-8-sig"))))) == 0
+    assert any(e["action"] == "Leads exported" for e in a.get("/api/audit").json())
+    assert visitor.get("/api/leads.csv").status_code == 401
+
+
+def test_csv_cells_guard_against_formulas():
+    from app import main
+    assert main._csv_cell("-5 discount") == "'-5 discount" and main._csv_cell("+92300") == "'+92300"
+    assert main._csv_cell("Sara") == "Sara" and main._csv_cell(None) == "" and main._csv_cell(92) == "92"
+
+
+def test_csv_times_follow_the_owners_timezone(visitor):
+    import csv, io
+    from datetime import datetime
+    a, biz = signup("Tz Shoes")
+    chat(visitor, biz["slug"], "sess-tz", "I am Ali 03001234567")
+    seen = lambda tz: next(csv.DictReader(io.StringIO(a.get(f"/api/leads.csv?tz={tz}").content.decode("utf-8-sig"))))["First seen"]
+    utc, pkt = (datetime.strptime(seen(tz), "%Y-%m-%d %H:%M") for tz in (0, -300))
+    assert (pkt - utc).total_seconds() == 5 * 3600  # Pakistan is UTC+5
+
+
+def test_pages_and_code_are_always_rechecked(shop, visitor):
+    """After an update, a browser must never mix an old page with a new script."""
+    client, _ = shop
+    for c, path in [(visitor, "/"), (visitor, "/signup"), (visitor, "/bot/brightpath-solar"), (client, "/app"),
+                    (visitor, "/static/admin.js"), (visitor, "/static/widget.js"), (visitor, "/static/admin.css")]:
+        assert c.get(path).headers.get("cache-control") == "no-cache", path

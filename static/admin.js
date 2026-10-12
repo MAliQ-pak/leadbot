@@ -254,6 +254,8 @@ document.addEventListener("click", e => {
   if (s) setStatus(s.dataset.status);
 });
 $("search").addEventListener("input", renderLeads);
+// the spreadsheet shows times in this computer's own timezone
+$("export").href = "/api/leads.csv?tz=" + new Date().getTimezoneOffset();
 $("d-close").onclick = closeDrawer;
 $("shade").onclick = closeDrawer;
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeDrawer(); });

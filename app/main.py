@@ -1,6 +1,8 @@
 """LeadBot web server: the product site, sign-up and login, each business's admin API, and the public
 chat API that every business's embedded bot talks to."""
 import base64
+import csv
+import io
 import json
 import os
 import re
@@ -8,7 +10,9 @@ import time
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from datetime import datetime, timedelta, timezone
+
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -37,10 +41,12 @@ app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
 @app.middleware("http")
 async def revalidate_code(request: Request, call_next):
-    """Browsers re-check scripts and styles on each load, so an update reaches every website that embeds
-    the widget straight away (unchanged files still come back as a cheap 304)."""
+    """Browsers re-check pages, scripts and styles on each load, so an update reaches every website that
+    embeds the widget straight away, and a dashboard never mixes an old page with a new script
+    (unchanged files still come back as a cheap 304)."""
     response = await call_next(request)
-    if request.url.path.startswith("/static/") and request.url.path.endswith((".js", ".css", ".html")):
+    code = request.url.path.startswith("/static/") and request.url.path.endswith((".js", ".css", ".html"))
+    if code or response.headers.get("content-type", "").startswith("text/html"):
         response.headers["Cache-Control"] = "no-cache"
     return response
 
@@ -344,6 +350,49 @@ def update_lead(session_id: str, body: LeadUpdate, ctx=Owner):
     if body.notes is not None and body.notes != (before.get("notes") or ""):
         db.audit(bid, "lead", "Notes edited", _who_is(before), session_id, who)
     return db.get_lead(bid, session_id)
+
+
+CSV_COLUMNS = [  # (header, how to get it from a lead)
+    ("Name", "name"), ("Phone", "phone"), ("Email", "email"), ("Need", "need"), ("Budget", "budget"),
+    ("Timeline", "timeline"), ("Tier", "tier"), ("Score", "score"), ("Rules score", "rule_score"),
+    ("Model score", "ml_score"), ("Why", "reason"), ("Stage", "status"), ("Notes", "notes"), ("Messages", "messages"),
+    ("First seen", "created"), ("Last active", "updated"), ("Last message", "last_message"),
+]
+
+
+def _csv_cell(value):
+    """Text a visitor typed must stay text: a cell starting with = + - @ would run as a formula in Excel."""
+    text = "" if value is None else str(value)
+    return "'" + text if text[:1] in ("=", "+", "-", "@", "\t", "\r") else text
+
+
+@app.get("/api/leads.csv")
+def export_leads(tz: int = 0, ctx=Owner):
+    """All of this business's leads as a spreadsheet. tz = the browser's getTimezoneOffset() in minutes,
+    so times appear in the owner's own clock (Pakistan is -300, i.e. UTC+5)."""
+    biz = ctx["biz"]
+    stages = business.settings(biz)["stage_names"]
+    zone = timezone(timedelta(minutes=-max(-840, min(840, tz))))
+    when = lambda ts: datetime.fromtimestamp(ts, zone).strftime("%Y-%m-%d %H:%M") if ts else ""
+    out = io.StringIO()
+    writer = csv.writer(out)
+    writer.writerow([h for h, _ in CSV_COLUMNS])
+    leads = db.all_leads(biz["id"])
+    for lead in leads:
+        row = []
+        for _, key in CSV_COLUMNS:
+            v = lead.get(key)
+            if key == "status":
+                v = stages.get(v or "new", v)
+            elif key in ("created", "updated"):
+                v = when(v)
+            row.append(_csv_cell(v))
+        writer.writerow(row)
+    db.audit(biz["id"], "lead", "Leads exported", f"{len(leads)} leads as CSV", actor=ctx["user"]["email"])
+    name = f"leads-{biz['slug']}-{datetime.now(zone).strftime('%Y-%m-%d')}.csv"
+    # the byte-order mark tells Excel the file is UTF-8, so Urdu text and "Rs" amounts show correctly
+    return Response("\ufeff" + out.getvalue(), media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="{name}"'})
 
 
 @app.post("/api/leads/{session_id}/whatsapp")
