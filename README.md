@@ -79,6 +79,15 @@ This **replaces everything** with two fictional businesses: BrightPath Solar (17
 
 The free service sleeps after a period without visits; the first visit then takes about a minute. Spending guards: at most `LLM_HOURLY_LIMIT` Claude replies per hour site-wide and `MAX_CLAUDE_MESSAGES_PER_CHAT` per conversation; beyond either, the offline bot answers.
 
+## Tests
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest
+```
+
+97 tests in `tests/` (about ten seconds): scoring, retrieval for every template, the website crawler's safety checks, passwords and sessions, and the API, including that no business can read, change or delete another's data. They use a throwaway SQLite file, the offline bot and a fake website, so they need no internet, AI key or database server, and never touch `leadbot.db` or the live database. GitHub runs them on every push (`.github/workflows/tests.yml`).
+
 ## Project report
 
 `report/report.md` is the report text. Build the styled PDF with:
@@ -115,4 +124,5 @@ kb/business.md                     solar template knowledge base
 
 - The classifier's starter training set (62 rows) is hand-written and illustrative; replace it with real labeled conversations and re-run `python train_classifier.py`. It is shared by all businesses.
 - One owner login per business (no team members or roles yet), and no password reset by email.
+- The automated tests use the offline bot and SQLite; Gemini replies and PostgreSQL were tested by hand.
 - Retrieval is TF-IDF; embeddings and a vector store would suit larger knowledge bases.

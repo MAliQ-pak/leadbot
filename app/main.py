@@ -350,6 +350,8 @@ def update_lead(session_id: str, body: LeadUpdate, ctx=Owner):
 def delete_lead(session_id: str, ctx=Owner):
     bid = ctx["biz"]["id"]
     before = db.get_lead(bid, session_id)
+    if "created" not in before:  # not a lead of this business (get_lead returns a stub for unknown ids)
+        raise HTTPException(404, "not found")
     db.delete_lead(bid, session_id)
     db.audit(bid, "lead", "Lead deleted", _who_is(before), session_id, ctx["user"]["email"])
     return {"ok": True}

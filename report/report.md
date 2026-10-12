@@ -326,7 +326,7 @@ Lead temperature uses amber for hot, emerald for warm and grey for cold, not red
 
 ## 6 Testing and evaluation
 
-Every feature was tested against the running system: the classifier by cross-validation, retrieval by scoring covered and uncovered questions, the AI by scripted conversations, the multi-business product by setting up a new business end to end, and security by direct requests. The results support the design, with one caveat: the classifier's data and the conversation set are small and written for this project.
+Every feature was tested against the running system: the classifier by cross-validation, retrieval by scoring covered and uncovered questions, the AI by scripted conversations, the multi-business product by setting up a new business end to end, and security by direct requests; everything that can run unattended is also an automated test suite that GitHub runs on every push. The results support the design, with one caveat: the classifier's data and the conversation set are small and written for this project.
 
 ### 6.1 Lead classifier
 
@@ -371,7 +371,7 @@ Five scripted conversations, 18 messages in all, were run against `gemini-3.8-fl
 | Shoe store: "do you have khussa? price?" | Price from the shoe knowledge base | "Khussa start from Rs 2,500", then asked which style and size |
 | Shoe store: return policy, delivery to Multan | Shop's own policies | 7-day return or exchange; free delivery over Rs 5,000, otherwise Rs 250 |
 
-On the live site, the shoe-store replies took 2.0 to 4.7 seconds. While Google's main model was overloaded, replies at first took 17 to 18 seconds; Section 6.6 explains the fix.
+On the live site, the shoe-store replies took 2.0 to 4.7 seconds. While Google's main model was overloaded, replies at first took 17 to 18 seconds; Section 6.7 explains the fix.
 
 ### 6.4 Multi-business tests
 
@@ -432,7 +432,21 @@ The website importer was tested on a small test site built for the purpose and o
 | Drag a deal card to another stage | Saved and logged | Saved; audit entry "Hassan: New → Site visit booked" |
 | Invalid stage name | Refused | 400 with the list of valid stages |
 
-### 6.6 Defects found by testing
+### 6.6 Automated tests
+
+All of the checks above that can run without a person were turned into an automated test suite: 97 pytest tests in the `tests/` folder, which run in about ten seconds with `python -m pytest`. GitHub runs them on every push (`.github/workflows/tests.yml`), so a change that breaks something is caught before it reaches the live site. The suite needs no internet, AI key or database server: it uses a throwaway SQLite file, the offline bot, and a fake website for the crawler.
+
+| File | Tests | What they protect |
+| --- | --- | --- |
+| `test_scoring.py` | 8 | Rule points, the 70 / 40 tiers, the 100 cap, each business's own buying words, the classifier marking "just checking prices for next year" down, and the 50/50 blend |
+| `test_retrieval.py` | 58 | For all seven sample templates, answerable questions score at least 0.3 and off-topic ones below it; one industry's synonyms do not leak into another's; a new shop's template uses its own name |
+| `test_ingest.py` | 14 | Private addresses (`localhost`, `10.x`, `192.168.x`, the cloud metadata address) are refused; the crawler follows links and the sitemap, obeys `robots.txt`, stays in scope, merges `/index.html`, keeps repeated text once and stops at its page limit |
+| `test_auth.py` | 5 | Passwords are salted hashes; a forged session cookie is rejected; log-in and log-out; five failures lock the address; a used email cannot sign up again |
+| `test_api.py` | 12 | Public pages are open and owner pages locked; a visitor chat becomes a scored lead; preview chats are not leads, and a visitor cannot fake the preview flag; one business cannot read, change or delete another's leads or see its knowledge base; a chat ID cannot move between businesses; unanswered questions are logged; an unusable AI answer falls back to the offline bot |
+
+To check that the tests really catch faults, the private-address check was deliberately removed: all five of its tests failed, and passed again once it was restored. Writing the suite also found one more defect: deleting another business's lead (with its chat ID) changed nothing but still answered "OK" and wrote a "Lead deleted" line in the caller's audit log. It now answers "not found".
+
+### 6.7 Defects found by testing
 
 Testing found and fixed problems that a demonstration alone would have hidden. From the first version:
 
@@ -454,7 +468,7 @@ From the multi-business version:
 - The first crawl of a real website fetched its home page twice, as `/` and `/index.html`. Both now count as one address, and a page whose text matches one already imported is skipped.
 - Once, the AI returned its own working notes ("Answering the user's input based on context and rules...") instead of the JSON reply, and the visitor saw them. Any answer that is not the expected JSON is now discarded and the offline bot answers that message instead, still capturing the visitor's details.
 
-### 6.7 Limits of this evaluation
+### 6.8 Limits of this evaluation
 
 The classifier data and its labels were written for the project, not taken from real sales. The conversation tests are scripted and few, and the multi-business tests used fictional businesses set up by the team. No study with real visitors or business owners was run. Section 8 describes how each gap could be closed.
 
@@ -588,7 +602,7 @@ The answers are written in the team's voice, ready to say aloud. The companion P
 
 ### A.8 Testing and deployment
 
-**How did you test the system?** Cross-validation for the classifier, retrieval scores for covered and uncovered questions, scripted conversations against the real AI, setting up a new shoe shop end to end, and direct requests to check every owner route was locked and separated. Testing found real defects, such as long chats silently falling back to the offline bot, and a template that named the wrong shop.
+**How did you test the system?** Cross-validation for the classifier, retrieval scores for covered and uncovered questions, scripted conversations against the real AI, setting up a new shoe shop end to end, and direct requests to check every owner route was locked and separated. The repeatable checks are 97 automated tests that GitHub runs on every push. Testing found real defects, such as long chats silently falling back to the offline bot, and a template that named the wrong shop.
 
 **Does the live site still lose its data on restart?** Not any more. The first version stored everything in a file on Render's free disk, which is wiped on every restart. Now the live site uses a hosted PostgreSQL database, so sign-ups and leads survive restarts and redeploys.
 

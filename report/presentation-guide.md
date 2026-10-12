@@ -366,6 +366,9 @@ With 62 rows, a single test split would be tiny and noisy. Five folds test every
 **Why 70 and 40, and why blend 50/50?**
 Business choices, set as settings: 70 roughly means contact details plus a clear need and budget, and 50/50 is equal trust in transparent rules and a model trained on little data. With real outcomes we would tune both.
 
+**Do you have automated tests?**
+Yes: 97 pytest tests in `tests/`, run by GitHub on every push and in about ten seconds on a laptop with `python -m pytest`. They cover scoring, retrieval for every template, the crawler's safety checks, passwords and sessions, and the API, including that one business can never read, change or delete another's data. They need no internet or AI key: a throwaway database, the offline bot and a fake website. To prove they catch faults, we removed the private-address check on purpose and all five of its tests failed. Writing them also found a small bug: deleting another business's lead said "OK" (though it deleted nothing); it now says "not found".
+
 **How did you test that a new business really works?**
 We signed up a new shoe shop, changed a price and added a topic, and checked the preview used both; made three preview chats and confirmed none became a lead; pasted the embed code into a separate website and got a real lead, hot 92, on that shop's pipeline; then confirmed each demo owner saw only their own leads, and that a chat ID reused on a second bot was refused. We repeated it on the PostgreSQL database the live site uses.
 
@@ -376,7 +379,7 @@ Two stand out. After six exchanges, the history sent to the AI started with a bo
 
 - **Self-labelled, illustrative training data** (62 rows written by the team): accuracy shows consistency, not real-world prediction.
 - **One classifier for every business.**
-- **No automated test suite** in the repository: tests were scripted and run by hand. pytest tests for scoring, retrieval, separation and the chat API are a clear next step.
+- **The automated tests use the offline bot**, so they check everything around the AI but not the AI's own wording; those conversations were tested by hand with Gemini.
 - **Thresholds and the blend weight are chosen, not learned.**
 
 ## 7 Muhammad Ali Qureshi: backend, accounts, dashboard, security and deployment
@@ -454,7 +457,7 @@ They answer different questions: the tier is how keen the visitor seemed, the st
 - **Logging out deletes the cookie**, but a stolen session stays valid until it expires (7 days); server-side sessions would end it everywhere.
 - **One owner per business**, no staff accounts, no email verification or password reset.
 - **One shared database connection** handles one query at a time: fine for a demo, a pool for real load.
-- **No automated tests or CI pipeline** in the repository.
+- **Tests run on SQLite**; the PostgreSQL path was tested by hand on Neon, not in the automated suite.
 
 ## 8 Questions any of you may get
 
