@@ -367,7 +367,7 @@ With 62 rows, a single test split would be tiny and noisy. Five folds test every
 Business choices, set as settings: 70 roughly means contact details plus a clear need and budget, and 50/50 is equal trust in transparent rules and a model trained on little data. With real outcomes we would tune both.
 
 **Do you have automated tests?**
-Yes: 97 pytest tests in `tests/`, run by GitHub on every push and in about ten seconds on a laptop with `python -m pytest`. They cover scoring, retrieval for every template, the crawler's safety checks, passwords and sessions, and the API, including that one business can never read, change or delete another's data. They need no internet or AI key: a throwaway database, the offline bot and a fake website. To prove they catch faults, we removed the private-address check on purpose and all five of its tests failed. Writing them also found a small bug: deleting another business's lead said "OK" (though it deleted nothing); it now says "not found".
+Yes: 98 pytest tests in `tests/`, run by GitHub on every push and in about ten seconds on a laptop with `python -m pytest`. They cover scoring, retrieval for every template, the crawler's safety checks, passwords and sessions, and the API, including that one business can never read, change or delete another's data. They need no internet or AI key: a throwaway database, the offline bot and a fake website. To prove they catch faults, we removed the private-address check on purpose and all five of its tests failed. Writing them also found a small bug: deleting another business's lead said "OK" (though it deleted nothing); it now says "not found".
 
 **How did you test that a new business really works?**
 We signed up a new shoe shop, changed a price and added a topic, and checked the preview used both; made three preview chats and confirmed none became a lead; pasted the embed code into a separate website and got a real lead, hot 92, on that shop's pipeline; then confirmed each demo owner saw only their own leads, and that a chat ID reused on a second bot was refused. We repeated it on the PostgreSQL database the live site uses.
@@ -400,10 +400,11 @@ I built the server that ties everything together: the API, the database that hol
 ### 7.3 Demo steps
 
 1. In Kicks Corner's dashboard, **Pipeline**: Sara is in **New**, hot. Drag her to **Order confirmed** (the shoe-store name for stage 3).
-2. Open **Audit log**: the stage change is at the top, with who did it and when, together with the knowledge and settings changes from the wizard.
-3. **Log out**. Log in as `owner@stride.demo`: a different business, its own leads and stage names, and none of Kicks Corner's. "Same server, same database, separate data."
-4. Optional: open `/app` in a private window: it sends you to log in.
-5. Show the repository and `render.yaml` briefly; mention `DATABASE_URL`, `DEMO_PASSWORD` and the AI key are set in Render, not in code.
+2. Open Sara's card and click **Message on WhatsApp**: WhatsApp opens with her number and a ready greeting (don't send it). Close it.
+3. Open **Audit log**: the stage change and "WhatsApp opened" are at the top, with who did it and when, together with the knowledge and settings changes from the wizard.
+4. **Log out**. Log in as `owner@stride.demo`: a different business, its own leads and stage names, and none of Kicks Corner's. "Same server, same database, separate data."
+5. Optional: open `/app` in a private window: it sends you to log in.
+6. Show the repository and `render.yaml` briefly; mention `DATABASE_URL`, `DEMO_PASSWORD` and the AI key are set in Render, not in code.
 
 ### 7.4 Code walkthrough
 
@@ -444,6 +445,9 @@ Only in environment variables: the laptop's `.env` and Render's settings. `.env`
 
 **Could someone run up the AI bill?**
 At most 200 AI replies per hour across the site and 30 per conversation; beyond that the offline bot answers.
+
+**How does the WhatsApp button work?**
+It is a `wa.me` link: WhatsApp's own way to open a chat with a number and a pre-filled message. `waNumber()` in `admin.js` turns Pakistani numbers like 0300-1234567 into 923001234567, which the link needs; a number that is too short gets no button. The owner reads and edits the greeting in WhatsApp and presses send, so nothing is sent automatically, and the click is written to the audit log. The bot answering on WhatsApp itself would need the WhatsApp Business API and Meta's business verification, which is future work.
 
 **Why is a lead's stage separate from hot, warm and cold?**
 They answer different questions: the tier is how keen the visitor seemed, the stage is what the business has done since. A hot lead still in New is the one to call first.

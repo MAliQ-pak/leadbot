@@ -38,6 +38,35 @@ const scoreCell = l => `<span class="badge ${esc(l.tier)}">${esc(l.tier)} ${l.sc
   (l.ml_score != null ? `<span class="sub">rules ${l.rule_score} · model ${l.ml_score}</span>` : "");
 const cell = v => v ? `<td>${esc(v)}</td>` : `<td class="none">-</td>`;
 
+// ---------- WhatsApp ----------
+// Pakistani numbers are usually written 0300-1234567; a WhatsApp link needs the country code: 923001234567.
+function waNumber(phone) {
+  const raw = String(phone || "").trim();
+  let d = raw.replace(/\D/g, "");
+  if (d.startsWith("00")) d = d.slice(2);
+  else if (!raw.startsWith("+") && d.length === 11 && d.startsWith("03")) d = "92" + d.slice(1);
+  else if (!raw.startsWith("+") && d.length === 10 && d.startsWith("3")) d = "92" + d;
+  return d.length >= 10 && d.length <= 15 ? d : null;
+}
+// opens WhatsApp with the number and a ready greeting; the owner can edit it before sending
+function waLink(l) {
+  const n = waNumber(l.phone);
+  if (!n) return null;
+  const first = (l.name || "").trim().split(/\s+/)[0];
+  const text = `Assalam o Alaikum${first ? " " + first : ""}, this is ${ME ? ME.business.name : "us"}. ` +
+    `Thank you for your enquiry${l.need ? " about " + l.need : ""}. How can we help you further?`;
+  return `https://wa.me/${n}?text=${encodeURIComponent(text)}`;
+}
+const WA_ICON = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21l1.65-4.5A8.5 8.5 0 1 1 8 20.1z"/><path d="M9.5 9.5c.3 2 1.9 3.7 4 4.2l.9-.9 1.6.6v1.2c-3.6.2-6.9-3-7-6.5h1.2z"/></svg>';
+const waButton = l => {
+  const href = waLink(l);
+  return href ? `<a class="wa" href="${esc(href)}" target="_blank" rel="noopener" draggable="false" data-wa="${esc(l.session_id)}"
+    title="Message ${esc(displayName(l))} on WhatsApp" aria-label="Message ${esc(displayName(l))} on WhatsApp">${WA_ICON}</a>` : "";
+};
+function logWhatsApp(sid) {  // the audit log records that the owner reached out
+  fetch("/api/leads/" + encodeURIComponent(sid) + "/whatsapp", { method: "POST" }).catch(() => {});
+}
+
 async function api(path, opts) {
   const r = await fetch(path, opts);
   if (r.status === 401) { location.href = "/login"; throw new Error("401"); }  // session expired
@@ -99,7 +128,7 @@ function renderOverview() {
 function miniItem(l, right, subtitle) {
   return `<div class="item" data-sid="${esc(l.session_id)}">
     <div class="who"><b>${esc(displayName(l))}</b><small>${esc(subtitle || contact(l) + (l.need ? " · " + l.need : ""))}</small></div>
-    ${right}<time>${ago(l.updated)}</time></div>`;
+    ${waButton(l)}${right}<time>${ago(l.updated)}</time></div>`;
 }
 
 function renderLeads() {
@@ -114,7 +143,7 @@ function renderLeads() {
   const list = leads.filter(l => filter(l) && match(l));
   $("rows").innerHTML = list.map(l => `
     <tr data-sid="${esc(l.session_id)}">
-      <td><b>${esc(displayName(l))}</b><span class="sub">${esc(contact(l))}</span></td>
+      <td><b>${esc(displayName(l))}</b> ${waButton(l)}<span class="sub">${esc(contact(l))}</span></td>
       <td>${scoreCell(l)}</td>${cell(l.need)}${cell(l.budget)}${cell(l.timeline)}
       <td><span class="pill ${esc(l.status)}">${esc(stageName(l.status))}</span></td>
       <td>${ago(l.updated)}<span class="sub">${l.messages || 0} messages</span></td>
@@ -151,6 +180,9 @@ async function refreshDrawer() {
   $("d-reason").textContent = "Why: " + (l.reason || "no buying signals yet");
   $("d-fields").innerHTML = FIELDS.map(f =>
     `<dt>${f}</dt><dd class="${l[f] ? "" : "none"}">${esc(l[f]) || "not shared"}</dd>`).join("");
+  const wa = waLink(l);
+  $("d-wa").hidden = !wa;
+  if (wa) { $("d-wa").href = wa; $("d-wa").dataset.wa = l.session_id; }
   $("d-status").innerHTML = STATUSES.map(s =>
     `<button data-status="${s}" class="${s} ${l.status === s ? "active" : ""}">${stageName(s)}</button>`).join("");
   if (!$("d-notes").dataset.dirty) $("d-notes").value = l.notes || "";
@@ -212,6 +244,8 @@ async function loadBot() {
 
 // ---------- events ----------
 document.addEventListener("click", e => {
+  const wa = e.target.closest("[data-wa]");
+  if (wa) return logWhatsApp(wa.dataset.wa);
   const row = e.target.closest("[data-sid]");
   if (row) return openDrawer(row.dataset.sid);
   const t = e.target.closest("[data-tab]");

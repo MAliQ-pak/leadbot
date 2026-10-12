@@ -109,3 +109,13 @@ def test_unusable_ai_answer_falls_back_to_the_offline_bot(monkeypatch):
                               ["Sneakers: Rs 3,999"], {}, biz)
     assert "notes" not in reply and lead["phone"] == "03124445566"
     assert llm._cooldown_until == 0  # one bad answer does not switch the AI off for everyone
+
+
+def test_whatsapp_click_is_logged_and_scoped(visitor):
+    a, biz_a = signup("Wa Shoes")
+    b, _ = signup("Other Shop")
+    chat(visitor, biz_a["slug"], "sess-wa", "I am Sara, 03211234567, need sneakers")
+    assert a.post("/api/leads/sess-wa/whatsapp").status_code == 200
+    assert any(e["action"] == "WhatsApp opened" and e["target"] == "sess-wa" for e in a.get("/api/audit").json())
+    assert b.post("/api/leads/sess-wa/whatsapp").status_code == 404  # not B's lead
+    assert visitor.post("/api/leads/sess-wa/whatsapp").status_code == 401

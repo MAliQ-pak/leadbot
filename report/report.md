@@ -260,6 +260,7 @@ Each owner's dashboard shows only their own business, and has five pages, refres
 - **Overview**: totals by tier and stage, the hot leads to call now, the pipeline and the latest conversations.
 - **Pipeline**: a deals board in the style of a CRM, with one column per stage. Stages 1, 2, 5 and 6 are always New, Contacted, Won and Lost; stages 3 and 4 follow the business's sales process, such as a free site visit then a written quote for solar, or order confirmed then out for delivery for shoes. Each card shows the lead's name, need, budget, phone and a hot, warm or cold tag with its score, hottest first. Dragging a card to another column moves the deal; clicking it opens the lead. Visitors who never shared a phone or email are hidden by default, because they cannot yet be followed up.
 - **Leads**: tabs for all, hot, warm, cold, won and lost, plus search. Opening a lead shows its details, the rules and model scores, the reason, the conversation, six stage buttons, notes and a delete button.
+- **Message on WhatsApp**: every lead with a phone number has a WhatsApp button (in the lead panel, on its pipeline card, in the leads table and in the hot-leads list). It opens WhatsApp with the lead's number and a ready greeting the owner can edit before sending, such as "Assalam o Alaikum Sara, this is Kicks Corner. Thank you for your enquiry about sneakers." Pakistani numbers written as 0300-1234567 are converted to the international form WhatsApp needs (923001234567). Each click is written to the audit log. Pakistani businesses follow up on WhatsApp far more than by email, so this turns a lead into a conversation in one click.
 - **Audit log**: a dated record of every owner action (stage changes, notes, deletes, knowledge-base edits, uploads, settings changes, logins and failed logins) and key system events (a new lead, a lead turning hot, an AI failure), filterable by type. Each entry records who acted.
 - **Bot & knowledge**: the active AI and model, a test box, and the training tabs described next. A link opens the setup wizard and live preview again at any time.
 
@@ -434,7 +435,7 @@ The website importer was tested on a small test site built for the purpose and o
 
 ### 6.6 Automated tests
 
-All of the checks above that can run without a person were turned into an automated test suite: 97 pytest tests in the `tests/` folder, which run in about ten seconds with `python -m pytest`. GitHub runs them on every push (`.github/workflows/tests.yml`), so a change that breaks something is caught before it reaches the live site. The suite needs no internet, AI key or database server: it uses a throwaway SQLite file, the offline bot, and a fake website for the crawler.
+All of the checks above that can run without a person were turned into an automated test suite: 98 pytest tests in the `tests/` folder, which run in about ten seconds with `python -m pytest`. GitHub runs them on every push (`.github/workflows/tests.yml`), so a change that breaks something is caught before it reaches the live site. The suite needs no internet, AI key or database server: it uses a throwaway SQLite file, the offline bot, and a fake website for the crawler.
 
 | File | Tests | What they protect |
 | --- | --- | --- |
@@ -442,7 +443,7 @@ All of the checks above that can run without a person were turned into an automa
 | `test_retrieval.py` | 58 | For all seven sample templates, answerable questions score at least 0.3 and off-topic ones below it; one industry's synonyms do not leak into another's; a new shop's template uses its own name |
 | `test_ingest.py` | 14 | Private addresses (`localhost`, `10.x`, `192.168.x`, the cloud metadata address) are refused; the crawler follows links and the sitemap, obeys `robots.txt`, stays in scope, merges `/index.html`, keeps repeated text once and stops at its page limit |
 | `test_auth.py` | 5 | Passwords are salted hashes; a forged session cookie is rejected; log-in and log-out; five failures lock the address; a used email cannot sign up again |
-| `test_api.py` | 12 | Public pages are open and owner pages locked; a visitor chat becomes a scored lead; preview chats are not leads, and a visitor cannot fake the preview flag; one business cannot read, change or delete another's leads or see its knowledge base; a chat ID cannot move between businesses; unanswered questions are logged; an unusable AI answer falls back to the offline bot |
+| `test_api.py` | 13 | Public pages are open and owner pages locked; a visitor chat becomes a scored lead; preview chats are not leads, and a visitor cannot fake the preview flag; one business cannot read, change or delete another's leads or see its knowledge base; a chat ID cannot move between businesses; unanswered questions are logged; an unusable AI answer falls back to the offline bot; a WhatsApp click is logged, and only for the lead's own business |
 
 To check that the tests really catch faults, the private-address check was deliberately removed: all five of its tests failed, and passed again once it was restored. Writing the suite also found one more defect: deleting another business's lead (with its chat ID) changed nothing but still answered "OK" and wrote a "Lead deleted" line in the caller's audit log. It now answers "not found".
 
@@ -500,7 +501,7 @@ The biggest limitation is that the classifier learned from 62 illustrative examp
 | Logging out deletes the cookie, but a stolen session stays valid until it expires (7 days) | Store sessions on the server so logout ends them everywhere |
 | Free Gemini quota can run out; free-tier content may be used by Google | A paid AI plan for real customer data |
 | Seven sample templates written by the team | Templates written and checked with real businesses in each industry |
-| Website chat only | WhatsApp and Facebook Messenger channels, which Pakistani customers use heavily |
+| Website chat only; the owner follows up on WhatsApp by hand (one click from each lead) | The bot itself on WhatsApp through the WhatsApp Business API, and Facebook Messenger |
 
 ## 9 Conclusion
 
@@ -602,7 +603,7 @@ The answers are written in the team's voice, ready to say aloud. The companion P
 
 ### A.8 Testing and deployment
 
-**How did you test the system?** Cross-validation for the classifier, retrieval scores for covered and uncovered questions, scripted conversations against the real AI, setting up a new shoe shop end to end, and direct requests to check every owner route was locked and separated. The repeatable checks are 97 automated tests that GitHub runs on every push. Testing found real defects, such as long chats silently falling back to the offline bot, and a template that named the wrong shop.
+**How did you test the system?** Cross-validation for the classifier, retrieval scores for covered and uncovered questions, scripted conversations against the real AI, setting up a new shoe shop end to end, and direct requests to check every owner route was locked and separated. The repeatable checks are 98 automated tests that GitHub runs on every push. Testing found real defects, such as long chats silently falling back to the offline bot, and a template that named the wrong shop.
 
 **Does the live site still lose its data on restart?** Not any more. The first version stored everything in a file on Render's free disk, which is wiped on every restart. Now the live site uses a hosted PostgreSQL database, so sign-ups and leads survive restarts and redeploys.
 

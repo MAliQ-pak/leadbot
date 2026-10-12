@@ -274,3 +274,18 @@ table.audit tbody tr:not(.linked):hover { background: transparent; }
 
 /* ---------- Commerce Emerald skin ---------- */
 h1, h2, h3 { font-weight: 700; letter-spacing: -.02em; }
+
+/* WhatsApp: WhatsApp's dark green, which keeps white text readable */
+.wa { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: #128C7E; color: #fff;
+      vertical-align: middle; flex: none; text-decoration: none; }
+.wa:hover { background: #075E54; }
+.wa-phone { display: inline-flex; align-items: center; gap: 4px; min-width: 0; color: #128C7E; font-weight: 600; text-decoration: none; }
+.wa-phone span { white-space: nowrap; }
+.deal-foot { flex-wrap: wrap; row-gap: 2px; }  /* a full phone number matters more than one line */
+.wa-phone svg { flex: none; width: 13px; height: 13px; }
+.wa-phone:hover { color: #075E54; text-decoration: underline; }
+.mini .item .wa { margin-right: 2px; }
+.wa-btn { display: inline-flex; align-items: center; gap: 8px; margin-top: 14px; background: #128C7E; color: #fff; text-decoration: none; }
+.wa-btn:hover { background: #075E54; }
+.wa-btn[hidden], #d-wa[hidden] + .wa-hint { display: none; }
+.wa-hint { margin: 6px 0 0; font-size: 12px; }

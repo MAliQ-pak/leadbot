@@ -346,6 +346,17 @@ def update_lead(session_id: str, body: LeadUpdate, ctx=Owner):
     return db.get_lead(bid, session_id)
 
 
+@app.post("/api/leads/{session_id}/whatsapp")
+def log_whatsapp(session_id: str, ctx=Owner):
+    """The owner opened WhatsApp to message this lead (the message itself is sent from WhatsApp)."""
+    bid = ctx["biz"]["id"]
+    lead = db.get_lead(bid, session_id)
+    if "created" not in lead:
+        raise HTTPException(404, "not found")
+    db.audit(bid, "lead", "WhatsApp opened", _who_is(lead), session_id, ctx["user"]["email"])
+    return {"ok": True}
+
+
 @app.delete("/api/leads/{session_id}")
 def delete_lead(session_id: str, ctx=Owner):
     bid = ctx["biz"]["id"]

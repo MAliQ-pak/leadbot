@@ -26,12 +26,20 @@ function renderBoard() {
 }
 window.renderBoard = renderBoard;
 
+// the phone number itself opens WhatsApp, so the card stays as compact as before
+function waPhone(l) {
+  const href = waLink(l);
+  if (!href) return `<span>${esc(l.phone || l.email || "No contact yet")}</span>`;
+  return `<a class="wa-phone" href="${esc(href)}" target="_blank" rel="noopener" draggable="false" data-wa="${esc(l.session_id)}"
+    title="Message on WhatsApp">${WA_ICON}<span>${esc(l.phone)}</span></a>`;
+}
+
 function card(l) {
   const facts = [l.need, l.budget && "Budget " + l.budget, l.timeline].filter(Boolean).map(esc).join(" · ");
   return `<div class="deal" draggable="true" data-sid="${esc(l.session_id)}" title="Drag to move, click to open">
     <div class="deal-top"><b>${esc(displayName(l))}</b><span class="badge ${esc(l.tier)}">${esc(l.tier)} ${l.score ?? 0}</span></div>
     ${facts ? `<div class="deal-facts">${facts}</div>` : ""}
-    <div class="deal-foot"><span>${esc(l.phone || l.email || "No contact yet")}</span><time>${ago(l.updated)}</time></div>
+    <div class="deal-foot">${waPhone(l)}<time>${ago(l.updated)}</time></div>
   </div>`;
 }
 
